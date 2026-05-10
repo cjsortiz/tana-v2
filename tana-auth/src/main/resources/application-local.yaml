@@ -6,9 +6,9 @@ spring:
       mode: always
       data-locations: classpath:scripts/*.sql
   datasource:
-    url: jdbc:mysql://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}
-    username: ${MYSQLUSER}
-    password: ${MYSQLPASSWORD}
+    url: ${DB_URL}
+    username: ${USER_NAME}
+    password: ${PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   web:
     resources:
