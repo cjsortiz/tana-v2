@@ -1,0 +1,118 @@
+spring:
+  application:
+    name: Tana
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:scripts/*.sql
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3308/tana_db?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: Napolio3
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  web:
+    resources:
+      static-locations: file:/D:/tana-place-images/
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      naming-strategy: org.hibernate.cfg.EJB3NamingStrategy
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: tanaBohol@gmail.com
+    password: gjtaepyhksqzncow
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        same-site: strict
+    context-path: /api/
+  port: 8080
+
+mybatis:
+  type-aliases-package: com.tana.tana_auth.functions.registration.model
+  # mapper-locations is optional if you only use @Select annotations
+  # mapper-locations: classpath:/mappers/*.xml
+
+logging:
+  level:
+    org.springframework.cache: TRACE
+
+# ACTUATOR CONFIGURATION
+# TRIGGER SAMPLE: http://localhost:8080/api/actuator/{replace_below}
+# errors, health, info, metrics, beans ,env
+info:
+  app:
+    name: Tana
+    version: "1.0.0"
+    owner: Tana Incorporated
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+jwt :
+  key: BRQpsPB+0NvkAZYIfd+fY5JIKKunYKRHDHr3XkYX4+Yn4CV5Vi+QOoSwPt9wP33oeOzuEp3biiYelEbnGQTBYw==
+  expiration: 1800000       # 30 minutes in milliseconds
+  refresh-duration: 3600000 # 1 hour in milliseconds
+
+app:
+  account-path: C:\Users\Owner\Documents\Image\AccountMaster
+  user-path: C:\\Users\\Owner\\Documents\\Image\\Users
+  excel-path: C:\\Users\\cj\\Documents\\tana-excel\\tana_master.xlsx
+
+
+encryption:
+  # fixed key configuration for key derivation. This allows to have consistent key generation and use the same key
+  # for encryption and decryption operations.
+  keyConfig: S7jmZSKRtr7oFzxOyVRVdKaS9CFqW2jdcVz3Jf8DoKU=
+
+  # This Salt value is used in the encryption and decryption process.
+  # It adds an extra layer of security to the key derivation process.
+  # The salt value is used in the getKeyFromSecret() method, where it is combined with the key configuration during
+  # key derivation using the PBKDF2 algorithm. The salt helps to make the derived key unique and adds complexity to the encryption process.
+  salt: hHpF2n0gHI0YCSECsc8XbQ==
+
+allowed:
+  origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://172.20.10.4:808,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:templates
+
+
+file:
+  upload-dir: D:/tana-place-images/
+  collection-image: D:/tana-collection/
+  user-images: D:/tana-users/

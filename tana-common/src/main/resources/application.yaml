@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: tana-common
+
+jwt :
+  key: BRQpsPB+0NvkAZYIfd+fY5JIKKunYKRHDHr3XkYX4+Yn4CV5Vi+QOoSwPt9wP33oeOzuEp3biiYelEbnGQTBYw==
+  expiration: 1800000       # 30 minutes in milliseconds
+  refresh-duration: 3600000 # 1 hour in milliseconds
+
+app:
+  account-path: C:\Users\Owner\Documents\Image\AccountMaster
+  places-path: C:\Users\Owner\Documents\Image\Places
+  user-path: C:\\Users\\Owner\\Documents\\Image\\Users
+  excel-path: C:\\Users\\Owner\\Documents\\tana-excel
+
