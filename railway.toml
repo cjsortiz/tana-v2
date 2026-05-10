@@ -1,0 +1,5 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "java -jar tana-auth/target/tana-auth-0.0.1-SNAPSHOT.jar"
