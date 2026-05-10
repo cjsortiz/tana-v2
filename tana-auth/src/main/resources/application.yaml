@@ -6,9 +6,9 @@ spring:
       mode: always
       data-locations: classpath:scripts/*.sql
   datasource:
-    url: jdbc:mysql://127.0.0.1:3308/tana_db?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: Napolio3
+    url: ${DB_URL}
+    username: ${USER_NAME}
+    password: ${PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   web:
     resources:
@@ -32,8 +32,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: tanaBohol@gmail.com
-    password: gjtaepyhksqzncow
+    username: ${GOOGLE_EMAIL}
+    password: ${GOOGLE_PASS}
     protocol: smtp
     properties:
       mail:
@@ -82,7 +82,7 @@ management:
       show-details: always
 
 jwt :
-  key: BRQpsPB+0NvkAZYIfd+fY5JIKKunYKRHDHr3XkYX4+Yn4CV5Vi+QOoSwPt9wP33oeOzuEp3biiYelEbnGQTBYw==
+  key: ${JWT_SECRET}
   expiration: 1800000       # 30 minutes in milliseconds
   refresh-duration: 3600000 # 1 hour in milliseconds
 
@@ -95,13 +95,13 @@ app:
 encryption:
   # fixed key configuration for key derivation. This allows to have consistent key generation and use the same key
   # for encryption and decryption operations.
-  keyConfig: S7jmZSKRtr7oFzxOyVRVdKaS9CFqW2jdcVz3Jf8DoKU=
+  keyConfig: ${ENCRYPTION_KEY}
 
   # This Salt value is used in the encryption and decryption process.
   # It adds an extra layer of security to the key derivation process.
   # The salt value is used in the getKeyFromSecret() method, where it is combined with the key configuration during
   # key derivation using the PBKDF2 algorithm. The salt helps to make the derived key unique and adds complexity to the encryption process.
-  salt: hHpF2n0gHI0YCSECsc8XbQ==
+  salt: ${SALT_KEY}
 
 allowed:
   origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://172.20.10.4:808,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
