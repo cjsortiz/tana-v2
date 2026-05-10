@@ -52,7 +52,7 @@ server:
         secure: true
         same-site: strict
     context-path: /api/
-  port: {SERVER_PORT}
+  port: {SERVER_PORT:8080}
 
 mybatis:
   type-aliases-package: com.tana.tana_auth.functions.registration.model
