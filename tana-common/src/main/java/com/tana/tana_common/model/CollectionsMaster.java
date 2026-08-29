@@ -24,7 +24,7 @@ import java.util.List;
                 columnList = "name"),
         }
 )
-public class CollectionsMaster {
+public class CollectionsMaster extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

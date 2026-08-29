@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Table(name = "Reflection")
-public class Reflection {
+public class Reflection extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

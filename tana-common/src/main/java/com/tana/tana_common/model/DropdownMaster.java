@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "DropdownMaster")
-public class DropdownMaster {
+public class DropdownMaster extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

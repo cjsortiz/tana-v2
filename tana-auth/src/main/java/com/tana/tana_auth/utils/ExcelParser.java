@@ -1,6 +1,7 @@
 package com.tana.tana_auth.utils;
 
 import com.tana.tana_auth.functions.places.dto.PlacesRequestDto;
+import com.tana.tana_auth.functions.places.repository.PlacesRepository;
 import com.tana.tana_auth.functions.places.service.PlacesService;
 
 import com.tana.tana_common.constant.CustomCodeErrors;
@@ -24,7 +25,16 @@ public class ExcelParser {
     @Autowired
     private PlacesService placesService;
 
+    @Autowired
+    private PlacesRepository placesRepository;
+
     public void parse(String filePath) {
+
+        if (placesRepository.count() > 0) {
+            System.out.println("Places already imported. Skipping Excel parse.");
+            return;
+        }
+
         try (Workbook workbook = new XSSFWorkbook(new FileInputStream(filePath))) {
 
             Sheet sheet = workbook.getSheet("ALL DATA");
@@ -48,9 +58,9 @@ public class ExcelParser {
                         .tanaTip(get(row, 24))
                         .town(get(row,14))
                         .gpsLocation(get(row, 15))
-                        .openingHours(get(row, 17))
-                        .openingDays(get(row, 19))
-                        .facebook(get(row, 20))
+                        .openingHours(get(row, 21))
+                        .openingDays(get(row, 23))
+                        .facebook(get(row, 21))
                         .instagram(get(row, 21))
                         .build();
 

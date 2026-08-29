@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 public interface AccountRepository extends JpaRepository<AccountMaster , Long> {
 
     @Query(value = "SELECT * FROM AccountMaster " +
-            "WHERE userName = :userName",nativeQuery = true)
+            "WHERE userName = :userName " +
+                " OR email = :userName",nativeQuery = true)
     AccountMaster findByUserName(@Param("userName")String userName);
 }

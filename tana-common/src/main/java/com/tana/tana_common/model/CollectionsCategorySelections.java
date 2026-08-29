@@ -16,7 +16,7 @@ import lombok.*;
                         columnList = "collectionId, placeId")
         }
 )
-public class CollectionsCategorySelections {
+public class CollectionsCategorySelections extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

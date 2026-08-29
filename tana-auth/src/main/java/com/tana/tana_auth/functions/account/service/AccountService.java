@@ -13,4 +13,5 @@ public interface AccountService {
     void clearUserDetailsCache(String id);
     AccountMasterResponseDto updateOnboardingStatus(AccountMasterRequestDto requestDto) throws TanaException;
     AccountMasterResponseDto updateProfile(AccountMasterRequestDto dto, MultipartFile file) throws TanaException;
+    void deleteCurrentAccount() throws TanaException;
 }

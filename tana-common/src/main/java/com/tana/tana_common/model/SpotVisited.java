@@ -20,7 +20,7 @@ import java.time.LocalDate;
                 @Index(name = "idx_sv_place_visitDate", columnList = "placeId, visitDate")
         }
 )
-public class SpotVisited {
+public class SpotVisited extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

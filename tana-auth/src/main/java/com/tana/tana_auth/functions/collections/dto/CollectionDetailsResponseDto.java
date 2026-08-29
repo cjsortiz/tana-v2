@@ -22,5 +22,6 @@ public class CollectionDetailsResponseDto {
     private String badge;
     private Long exploredCount;
     private String collectionImage;
+    private String helperText;
     private List<PlacesDetailsResponseDto> placeList;
 }

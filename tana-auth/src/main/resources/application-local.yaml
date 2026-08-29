@@ -86,10 +86,25 @@ jwt :
   expiration: 1800000       # 30 minutes in milliseconds
   refresh-duration: 3600000 # 1 hour in milliseconds
 
+google:
+  client-ids: ${GOOGLE_CLIENT_IDS:}
+
+apple:
+  client-id: ${APPLE_CLIENT_ID:com.app.tana}
+  team-id: ${APPLE_TEAM_ID:}
+  key-id: ${APPLE_KEY_ID:}
+  private-key: ${APPLE_PRIVATE_KEY:}
+  private-key-path: ${APPLE_PRIVATE_KEY_PATH:}
+
 app:
   account-path: C:\Users\Owner\Documents\Image\AccountMaster
   user-path: C:\\Users\\Owner\\Documents\\Image\\Users
-  excel-path: C:\\Users\\cj\\Documents\\tana-excel\\tana_master.xlsx
+  excel-path: ${EXCEL_PATH:C:\\Users\\cj\\Documents\\tana-excel\\tana_master.xlsx}
+
+qr:
+  ios-app-store-url: ${IOS_APP_STORE_URL:https://apps.apple.com/ph/search?term=tana}
+  android-play-store-url: ${ANDROID_PLAY_STORE_URL:https://play.google.com/store/apps/details?id=com.app.tana}
+  analytics-hash-salt: ${QR_ANALYTICS_HASH_SALT:tana-qr-analytics}
 
 
 encryption:

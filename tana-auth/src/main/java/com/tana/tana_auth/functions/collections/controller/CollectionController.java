@@ -1,14 +1,16 @@
 package com.tana.tana_auth.functions.collections.controller;
 
+import com.tana.tana_auth.functions.collections.dto.CollectionCreateRequestDto;
 import com.tana.tana_auth.functions.collections.dto.CollectionDetailsRequestDto;
+import com.tana.tana_auth.functions.collections.dto.CuratorSpotRequestDto;
+import com.tana.tana_auth.functions.collections.dto.TanaStoryRequestDto;
 import com.tana.tana_auth.functions.collections.service.CollectionService;
-import com.tana.tana_auth.functions.collections.service.CollectionsCategorySelectionsService;
 import com.tana.tana_common.constant.dto.TanaApiResponse;
 import com.tana.tana_common.constant.exception.TanaException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -19,24 +21,84 @@ import java.nio.file.Paths;
 @RequestMapping(value = "/collections")
 public class CollectionController {
 
-    @Autowired
-    private CollectionsCategorySelectionsService collectionsCategorySelectionsService;
+    private final CollectionService collectionService;
 
-    @Autowired
-    private CollectionService collectionService;
-
+    public CollectionController(CollectionService collectionService) {
+        this.collectionService = collectionService;
+    }
 
     @PostMapping(value = "/getList")
-    private TanaApiResponse getCollectionsList(
-    ){
+    public TanaApiResponse getCollectionsList() {
         return TanaApiResponse.builder()
                 .isSuccess(true)
                 .resultData(collectionService.getCollectionsList())
                 .build();
     }
 
+    @GetMapping(value = "/home-v2")
+    public TanaApiResponse getHomeV2(){
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.getHomeV2())
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(value = "/admin/all")
+    public TanaApiResponse getAdminCollectionOptions() {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.getAdminCollectionOptions())
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/create")
+    public TanaApiResponse createCollection(@RequestBody CollectionCreateRequestDto requestDto) throws TanaException {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.createCollection(requestDto))
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(value = "/admin/curator-spots")
+    public TanaApiResponse getAdminCuratorSpots() {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.getAdminCuratorSpots())
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/admin/curator-spots")
+    public TanaApiResponse saveCuratorSpot(@RequestBody CuratorSpotRequestDto requestDto) throws TanaException {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.saveCuratorSpot(requestDto))
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(value = "/admin/tana-stories")
+    public TanaApiResponse getAdminTanaStories() {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.getAdminTanaStories())
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/admin/tana-stories")
+    public TanaApiResponse saveTanaStory(@RequestBody TanaStoryRequestDto requestDto) throws TanaException {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.saveTanaStory(requestDto))
+                .build();
+    }
+
     @PostMapping(value = "/details")
-    private TanaApiResponse getCollectionDetails(
+    public TanaApiResponse getCollectionDetails(
             @RequestAttribute("validated") CollectionDetailsRequestDto collectionDetailsRequestDto
     ) throws TanaException {
         return TanaApiResponse.builder()

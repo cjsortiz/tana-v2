@@ -15,4 +15,5 @@ import java.util.List;
 public class SavedCollectionResponseDto {
 
     private List<CollectionsResponseDto> collectionsResponseDtoList;
+    private List<SavedSpotDetailsResponseDto> placesResponseDtoList;
 }

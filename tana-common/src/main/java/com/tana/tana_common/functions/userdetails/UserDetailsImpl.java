@@ -80,7 +80,7 @@ public class UserDetailsImpl implements UserDetails {
                 .image(user.getUserImage())
                 .image64(image64)
                 .accessLevel(user.getAccessLevel())
-                .displayName(buildDisplayName(user))
+                .displayName(user.getFirstName())
                 .fullName(String.join(" ", new String[]{user.getFirstName(), user.getLastName()}))
                 .emailAddress(user.getEmail())
                 .dropdownMasterList(dropdownMasterList)

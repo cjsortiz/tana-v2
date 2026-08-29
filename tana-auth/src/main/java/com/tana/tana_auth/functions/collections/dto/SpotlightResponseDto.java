@@ -18,4 +18,6 @@ public class SpotlightResponseDto {
     private String helperText;
     private Long collectionId;
     private String collectionName;
+    private String spotImage;
+    private String proofLabel;
 }

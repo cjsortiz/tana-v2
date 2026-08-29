@@ -4,22 +4,24 @@ import com.tana.tana_common.constant.dto.TanaApiResponse;
 import com.tana.tana_common.constant.exception.TanaException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import lombok.extern.slf4j.Slf4j;
 
-import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.List;
 
 @ControllerAdvice
+@Slf4j
 public class TanaExceptionHandlerConfig {
 
     @ExceptionHandler(TanaException.class)
-    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public @ResponseBody TanaApiResponse handleCustomException(TanaException ex, HttpServletRequest request) {
+    public @ResponseBody ResponseEntity<TanaApiResponse> handleCustomException(TanaException ex, HttpServletRequest request) {
 
         List<String> errorMessages = new ArrayList<>();
         List<String> errorCodes = new ArrayList<>();
@@ -27,12 +29,24 @@ public class TanaExceptionHandlerConfig {
         errorMessages.add(ex.getErrorMessage());
         errorCodes.add(ex.getMessageCode());
 
-        return TanaApiResponse.builder()
+        log.warn(
+                "TanaException handled: method={}, uri={}, code={}, message={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessageCode(),
+                ex.getErrorMessage()
+        );
+
+        TanaApiResponse response = TanaApiResponse.builder()
                 .isSuccess(false)
                 .errorCodes(errorCodes)
                 .exceptionType("TANA CUSTOM EXCEPTION")
                 .errorMessages(errorMessages)
                 .build();
+
+        return ResponseEntity
+                .status(resolveStatus(ex))
+                .body(response);
     }
 
 
@@ -43,7 +57,7 @@ public class TanaExceptionHandlerConfig {
         List<String> errorMessages = new ArrayList<>();
         List<String> errorCodes = new ArrayList<>();
 
-        errorMessages.add(ex.getMessage());
+        errorMessages.add("Something went wrong. Please try again.");
         errorCodes.add("TANA EXCEPTION");
 
         System.out.println(ex.getMessage());
@@ -57,34 +71,47 @@ public class TanaExceptionHandlerConfig {
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public @ResponseBody TanaApiResponse handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+    public @ResponseBody ResponseEntity<TanaApiResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         List<String> errorMessages = new ArrayList<>();
         List<String> errorCodes = new ArrayList<>();
 
-        errorMessages.add(ex.getMessage());
-        errorCodes.add("TANA BAD CREDENTIALS ERROR");
+        errorMessages.add("Email/username or password is incorrect.");
+        errorCodes.add("badCredentials");
 
-        return TanaApiResponse.builder()
+        TanaApiResponse response = TanaApiResponse.builder()
                 .isSuccess(false)
                 .errorCodes(errorCodes)
                 .exceptionType("TANA BAD CREDENTIALS ERROR")
                 .errorMessages(errorMessages)
                 .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public @ResponseBody TanaApiResponse handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+    public @ResponseBody ResponseEntity<TanaApiResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         List<String> errorMessages = new ArrayList<>();
         List<String> errorCodes = new ArrayList<>();
 
-        errorMessages.add(ex.getMessage());
-        errorCodes.add("TANA FORBIDDEN ERROR");
+        errorMessages.add("You do not have permission to perform this action.");
+        errorCodes.add("forbidden");
 
-        return TanaApiResponse.builder()
+        TanaApiResponse response = TanaApiResponse.builder()
                 .isSuccess(false)
                 .errorCodes(errorCodes)
                 .exceptionType("TANA FORBIDDEN ERROR")
                 .errorMessages(errorMessages)
                 .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    private HttpStatus resolveStatus(TanaException ex) {
+        if (ex.getCode() == null) {
+            return HttpStatus.BAD_REQUEST;
+        }
+
+        HttpStatus status = HttpStatus.resolve(ex.getCode());
+        return status != null ? status : HttpStatus.BAD_REQUEST;
     }
 }

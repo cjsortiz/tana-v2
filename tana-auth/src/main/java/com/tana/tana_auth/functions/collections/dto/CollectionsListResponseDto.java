@@ -19,4 +19,6 @@ public class CollectionsListResponseDto {
     private List<CollectionsResponseDto> sportsAndWellness;
     private CollectionsResponseDto featuredCollection;
     private List<SpotlightResponseDto> spotlightResponseDtoList;
+    private List<SpotlightResponseDto> curatorSpotResponseDtoList;
+    private List<TanaStoryResponseDto> tanaStoryResponseDtoList;
 }

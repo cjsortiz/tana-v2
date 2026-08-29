@@ -13,3 +13,7 @@ app:
   user-path: C:\\Users\\Owner\\Documents\\Image\\Users
   excel-path: C:\\Users\\Owner\\Documents\\tana-excel
 
+AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+AWS_REGION: ${AWS_REGION}
+S3_BUCKET_NAME: ${S3_BUCKET_NAME}

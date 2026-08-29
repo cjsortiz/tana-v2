@@ -1,29 +1,29 @@
-INSERT INTO spot (spotName, description)
+INSERT INTO Spot (spotName, description)
 SELECT 'Nature & Scenery', 'Beautiful landscapes'
 WHERE NOT EXISTS (
-    SELECT 1 FROM spot WHERE spotName = 'Nature & Scenery'
+    SELECT 1 FROM Spot WHERE spotName = 'Nature & Scenery'
 );
 
-INSERT INTO spot (spotName, description)
+INSERT INTO Spot (spotName, description)
 SELECT 'Community & Culture', 'Local traditions'
 WHERE NOT EXISTS (
-    SELECT 1 FROM spot WHERE spotName = 'Community & Culture'
+    SELECT 1 FROM Spot WHERE spotName = 'Community & Culture'
 );
 
-INSERT INTO spot (spotName, description)
+INSERT INTO Spot (spotName, description)
 SELECT 'Food & Drink', 'Food and drinks'
 WHERE NOT EXISTS (
-    SELECT 1 FROM spot WHERE spotName = 'Food & Drink'
+    SELECT 1 FROM Spot WHERE spotName = 'Food & Drink'
 );
 
-INSERT INTO spot (spotName, description)
+INSERT INTO Spot (spotName, description)
 SELECT 'Sports & Wellness', 'Sports and wellness'
 WHERE NOT EXISTS (
-    SELECT 1 FROM spot WHERE spotName = 'Sports & Wellness'
+    SELECT 1 FROM Spot WHERE spotName = 'Sports & Wellness'
 );
 
-INSERT INTO spot (spotName, description)
+INSERT INTO Spot (spotName, description)
 SELECT 'Events', 'Events'
 WHERE NOT EXISTS (
-    SELECT 1 FROM spot WHERE spotName = 'Events'
+    SELECT 1 FROM Spot WHERE spotName = 'Events'
 );

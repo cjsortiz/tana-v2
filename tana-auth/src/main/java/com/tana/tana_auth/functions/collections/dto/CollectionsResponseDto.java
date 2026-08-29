@@ -24,4 +24,6 @@ public class CollectionsResponseDto {
     private String helperText;
 
     private String collectionImage;
+
+    private String overview;
 }

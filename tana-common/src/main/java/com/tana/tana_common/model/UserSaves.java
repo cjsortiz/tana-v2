@@ -15,7 +15,7 @@ import lombok.*;
                 @UniqueConstraint(columnNames = {"accountId", "placeId"}),
                 @UniqueConstraint(columnNames = {"accountId", "collectionId"})
         })
-public class UserSaves {
+public class UserSaves extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

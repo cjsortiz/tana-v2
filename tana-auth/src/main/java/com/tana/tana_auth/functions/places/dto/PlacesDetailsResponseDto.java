@@ -26,7 +26,12 @@ public class PlacesDetailsResponseDto {
     private String collectionName;
     private String collectionImage;
     private String badge;
+    private String badgeDesc;
     private Integer index;
     private String tanaTip;
+    private String openingHours;
+    private String openingDays;
     private List<String> spotImages;
+    private Boolean saved;
+    private String mainCategory;
 }

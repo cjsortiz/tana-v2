@@ -24,14 +24,15 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
                 "cm.spot as category, " +
                 "COUNT(DISTINCT sv.placeId) AS visitedCount, " +
                 "cm.helperText, " +
-                "cm.collectionImage " +
+                "cm.collectionImage, " +
+                "cm.overview " +
             "FROM CollectionsMaster cm " +
             "LEFT JOIN CollectionsCategorySelections cms " +
                 "ON cms.collectionId = cm.collectionId " +
             "LEFT JOIN SpotVisited sv " +
                     "ON sv.placeId = cms.placeId " +
                     "AND sv.accountId = :accountId " +
-            "GROUP BY cm.collectionId, cm.collectionName, cm.spot " +
+            "GROUP BY cm.collectionId, cm.collectionName, cm.spot, cm.helperText, cm.collectionImage, cm.overview " +
             "HAVING COUNT(cms.collectionSelectionId) > 0",nativeQuery = true)
     List<CollectionsResponseDto> getCollectionsListResponse(@Param("accountId") Long accountId);
 
@@ -49,7 +50,8 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
                 "cm.spot as category, " +
                 "COUNT(DISTINCT sv.placeId) AS visitedCount," +
                 "cm.helperText, " +
-                "cm.collectionImage "  +
+                "cm.collectionImage, "  +
+                "cm.overview "  +
             "FROM CollectionsMaster cm " +
             "LEFT JOIN CollectionsCategorySelections cms " +
                 "ON cms.collectionId = cm.collectionId " +
@@ -57,7 +59,7 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
                 "ON sv.placeId = cms.placeId " +
                 "AND sv.visitDate >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01') " +
                 "AND sv.visitDate < DATE_FORMAT(CURRENT_DATE() + INTERVAL 1 MONTH, '%Y-%m-01') " +
-            "GROUP BY cm.collectionId " +
+            "GROUP BY cm.collectionId, cm.collectionName, cm.spot, cm.helperText, cm.collectionImage, cm.overview " +
             "ORDER BY COUNT(sv.visitedId) DESC " +
             "LIMIT 1",
             nativeQuery = true)
@@ -71,7 +73,8 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
         cm.spot AS category,
         COUNT(DISTINCT sv.placeId) AS visitedCount,
         cm.helperText,
-        cm.collectionImage
+        cm.collectionImage,
+        cm.overview
 
     FROM CollectionsMaster cm
 
@@ -91,6 +94,7 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
         cm.spot,
         cm.helperText,
         cm.collectionImage,
+        cm.overview,
         cm.moodPriority
 
     HAVING COUNT(DISTINCT sv.placeId)
@@ -110,6 +114,7 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
         c.badge,
         c.collectionId,
         c.collectionName,
+        c.collectionImage,
         COALESCE((
             SELECT COUNT(*)
             FROM (
@@ -129,14 +134,17 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
         COUNT(DISTINCT sv.visitedId)      AS exploredSpotsCount,
         COUNT(DISTINCT pcs.placeId)       AS totalSpots,
         c.overview,
-        c.badgeOverview
+        c.badgeOverview,
+        s.spotName                            AS spotId
     FROM CollectionsMaster c
     INNER JOIN CollectionsCategorySelections pcs ON pcs.collectionId = c.collectionId
+    LEFT JOIN Spot s
+        ON s.spotId = c.spot
     LEFT JOIN SpotVisited sv
         ON sv.placeId = pcs.placeId
         AND sv.accountId = :accountId
         AND sv.isVisited = 1
-    GROUP BY c.collectionId, c.collectionName, c.overview, c.badgeOverview
+    GROUP BY c.collectionId, c.collectionName, c.collectionImage, c.overview, c.badgeOverview
     """, nativeQuery = true)
     List<BadgeProjection> getCollectionProgress(@Param("accountId") Long accountId);
 
@@ -182,6 +190,27 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
     """, nativeQuery = true)
     List<Long> getCompletedCollections(Long accountId);
 
+    @Query(value = """
+    SELECT COUNT(DISTINCT ccs.placeId)
+    FROM CollectionsCategorySelections ccs
+    WHERE ccs.collectionId = :collectionId
+    """, nativeQuery = true)
+    Long countCollectionSpots(@Param("collectionId") Long collectionId);
+
+    @Query(value = """
+    SELECT COUNT(DISTINCT sv.placeId)
+    FROM CollectionsCategorySelections ccs
+    INNER JOIN SpotVisited sv
+        ON sv.placeId = ccs.placeId
+        AND sv.accountId = :accountId
+        AND sv.isVisited = true
+    WHERE ccs.collectionId = :collectionId
+    """, nativeQuery = true)
+    Long countVisitedCollectionSpots(
+        @Param("collectionId") Long collectionId,
+        @Param("accountId") Long accountId
+    );
+
 
     @Query(value =
             "SELECT " +
@@ -191,7 +220,8 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
                     "cm.spot as category, " +
                     "COUNT(DISTINCT sv.placeId) AS visitedCount, " +
                     "cm.helperText, " +
-                    "cm.collectionImage " +
+                    "cm.collectionImage, " +
+                    "cm.overview " +
                     "FROM CollectionsMaster cm " +
 
                     // 🔥 ONLY saved collections
@@ -207,7 +237,7 @@ public interface CollectionRepository extends JpaRepository<CollectionsMaster, L
                     "ON sv.placeId = cms.placeId " +
                     "AND sv.accountId = :accountId " +
 
-                    "GROUP BY cm.collectionId, cm.collectionName, cm.spot " +
+                    "GROUP BY cm.collectionId, cm.collectionName, cm.spot, cm.helperText, cm.collectionImage, cm.overview " +
                     "HAVING COUNT(cms.collectionSelectionId) > 0",
             nativeQuery = true
     )

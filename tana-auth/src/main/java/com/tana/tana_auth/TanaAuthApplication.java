@@ -15,7 +15,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import java.io.File;
 
 @SpringBootApplication(scanBasePackages = {"com.tana.tana_auth", "com.tana.tana_common"})
-@EntityScan(basePackages = {"com.tana.tana_common.model"}) // scan your entity package
+@EntityScan(basePackages = {
+        "com.tana.tana_common.model",
+        "com.tana.tana_auth.functions.qr.model"
+})
 @EnableJpaRepositories(basePackages = {
         "com.tana.tana_common",
         "com.tana.tana_auth"
@@ -39,18 +42,18 @@ public class TanaAuthApplication {
      * This bean runs once after the application context is loaded.
      * It fetches XLSX metadata and saves it to the database.
      */
-//    @Bean
-//    public CommandLineRunner run() {
-//        return args -> {
-//            System.out.println("path : " + excelPath);
-//
-//            File file = new File(excelPath);
-//            if (!file.exists()) {
-//                System.err.println("XLSX file not found at path: " + excelPath);
-//                return;
-//            }
-//
-//            excelParser.parse(excelPath);
-//        };
-//    }
+    @Bean
+    public CommandLineRunner run() {
+        return args -> {
+            System.out.println("path : " + excelPath);
+
+            File file = new File(excelPath);
+            if (!file.exists()) {
+                System.err.println("XLSX file not found at path: " + excelPath);
+                return;
+            }
+
+            excelParser.parse(excelPath);
+        };
+    }
 }

@@ -1,7 +1,6 @@
 package com.tana.tana_common.security;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.tana.tana_common.constant.CommonConstants;
@@ -16,12 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestAttribute;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -40,7 +36,7 @@ public class Interceptor implements HandlerInterceptor {
     @Autowired
     private CommonUtils commonUtils;
 
-    private final Map<String, List<Long>> requestTimestamps = new ConcurrentHashMap<>();
+    private final Map<String, Queue<Long>> requestTimestamps = new ConcurrentHashMap<>();
     private final int MAX_REQUESTS_PER_MINUTE = 100;
 
     @Override
@@ -50,11 +46,13 @@ public class Interceptor implements HandlerInterceptor {
         String client = request.getRemoteAddr();
         long now = System.currentTimeMillis();
 
-        requestTimestamps.putIfAbsent(client, new ArrayList<>());
-        List<Long> timestamps = requestTimestamps.get(client);
+        Queue<Long> timestamps = requestTimestamps.computeIfAbsent(
+            client,
+            key -> new java.util.concurrent.ConcurrentLinkedQueue<>()
+        );
 
         // Remove requests older than 1 minute
-        timestamps.removeIf(time -> time + 60_000 < now);
+        timestamps.removeIf(time -> time == null || time + 60_000 < now);
 
         if (timestamps.size() >= MAX_REQUESTS_PER_MINUTE) {
             response.setStatus(CustomCodeErrors.TOO_MANY_REQUESTS.getCode());
@@ -66,7 +64,8 @@ public class Interceptor implements HandlerInterceptor {
 
         final String authHeader = request.getHeader("Authorization");
         String tokenString = CommonConstants.EMPTY_STRING;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        boolean publicAuthRequest = request.getRequestURI().startsWith("/api/auth/");
+        if (!publicAuthRequest && authHeader != null && authHeader.startsWith("Bearer ")) {
             tokenString = authHeader.substring(7); // remove "Bearer "
         }
         if (!ObjectUtils.isEmpty(tokenString)) {
@@ -84,10 +83,24 @@ public class Interceptor implements HandlerInterceptor {
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 
+        if (!(handler instanceof HandlerMethod)) {
+            return true;
+        }
         HandlerMethod handlerMethod = (HandlerMethod) handler;
 
         String contentType = request.getContentType();
         if (contentType != null && contentType.toLowerCase().contains("multipart")) {
+            return true;
+        }
+
+        List<MethodParameter> requestAttributeParameters = new ArrayList<>();
+        for (MethodParameter methodParameter : handlerMethod.getMethodParameters()) {
+            if (methodParameter.hasParameterAnnotation(RequestAttribute.class)) {
+                requestAttributeParameters.add(methodParameter);
+            }
+        }
+
+        if (requestAttributeParameters.isEmpty()) {
             return true;
         }
 
@@ -105,30 +118,26 @@ public class Interceptor implements HandlerInterceptor {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        for (MethodParameter methodParameter : handlerMethod.getMethodParameters()) {
+        for (MethodParameter methodParameter : requestAttributeParameters) {
+            Class<?> paramType = methodParameter.getParameterType();
 
-            if (methodParameter.hasParameterAnnotation(RequestAttribute.class)) {
+            Object rawObject;
 
-                Class<?> paramType = methodParameter.getParameterType();
-
-                Object rawObject;
-
-                if (body.isEmpty()) {
+            if (body.isEmpty()) {
                     // ✅ handle empty body safely
-                    rawObject = paramType.getDeclaredConstructor().newInstance();
-                } else {
+                rawObject = paramType.getDeclaredConstructor().newInstance();
+            } else {
                     // ✅ normal JSON parsing
-                    rawObject = objectMapper.readValue(body, paramType);
-                }
+                rawObject = objectMapper.readValue(body, paramType);
+            }
 
                 // ✅ validate
-                Object validatedObject = validateAndCast(rawObject);
+            Object validatedObject = validateAndCast(rawObject);
 
                 // ✅ inject
-                request.setAttribute("validated", validatedObject);
-            }
+            request.setAttribute("validated", validatedObject);
         }
-            return true;
+        return true;
     }
 
     @Override

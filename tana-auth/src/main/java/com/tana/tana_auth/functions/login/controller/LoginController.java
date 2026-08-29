@@ -1,5 +1,7 @@
 package com.tana.tana_auth.functions.login.controller;
 
+import com.tana.tana_auth.functions.login.dto.GoogleLoginRequestDto;
+import com.tana.tana_auth.functions.login.dto.AppleLoginRequestDto;
 import com.tana.tana_auth.functions.login.dto.LoginRequestDto;
 import com.tana.tana_auth.functions.login.dto.RefreshTokenDto;
 import com.tana.tana_auth.functions.login.service.LoginService;
@@ -20,6 +22,22 @@ public class LoginController {
         return TanaApiResponse.builder()
                 .isSuccess(true)
                 .resultData(loginService.login(requestDto))
+                .build();
+    }
+
+    @PostMapping(value = "/google")
+    private TanaApiResponse googleLogin(@RequestAttribute("validated") GoogleLoginRequestDto requestDto) {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(loginService.loginWithGoogle(requestDto))
+                .build();
+    }
+
+    @PostMapping(value = "/apple")
+    private TanaApiResponse appleLogin(@RequestAttribute("validated") AppleLoginRequestDto requestDto) {
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(loginService.loginWithApple(requestDto))
                 .build();
     }
 

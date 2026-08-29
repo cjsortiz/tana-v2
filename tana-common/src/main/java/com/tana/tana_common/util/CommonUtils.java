@@ -5,27 +5,41 @@ import com.tana.tana_common.constant.CustomCodeErrors;
 import com.tana.tana_common.constant.enums.TanaDateFormat;
 import com.tana.tana_common.constant.enums.TanaFileName;
 import com.tana.tana_common.constant.exception.TanaException;
-import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
-import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class CommonUtils {
 
+    @Autowired
+    private S3Client s3Client;
+
+    @Value("${S3_BUCKET_NAME}")
+    private String bucketName;
 
     public static String getUploadImage(Object id, String fileDirectory, String fileName) throws TanaException {
         try {
@@ -42,38 +56,6 @@ public class CommonUtils {
             return Base64.getEncoder().encodeToString(imageBytes);
         } catch (IOException o) {
             return null; // Return null in case of an IOException
-        }
-    }
-
-    /***
-     * Upload Image
-     *
-     * @param id            used to create a folder to append in directory
-     * @param fileDirectory the directory where the image file will be saved
-     * @param fileName      the file name generated using
-     *                      {@link #generateFileName(TanaFileName, MultipartFile)}
-     * @param base64Image   the uploaded image file
-     * @throws TanaException if an error occurs while saving the file
-     */
-    public void uploadImage(Object id, String fileDirectory, String fileName, String base64Image) {
-        try {
-            // Remove the data:image/<image-type>;base64, prefix
-            String imageBase64 = base64Image.replaceFirst("data:image/[^;]+;base64,", "");
-
-            // Check if directory already exists
-            java.nio.file.Path fullFileDirectory = Paths.get(fileDirectory, id.toString());
-            if (!Files.exists(fullFileDirectory)) {
-                Files.createDirectories(fullFileDirectory);
-            }
-
-            // Decode base64 and process the image as needed
-            byte[] bytes = Base64.getDecoder().decode(imageBase64);
-            String fullFileName = fullFileDirectory + File.separator + fileName;
-            java.nio.file.Path path = Paths.get(fullFileName);
-
-            Files.write(path, bytes);
-        } catch (IOException o) {
-            throw new TanaException(CustomCodeErrors.GENERIC_ERROR);
         }
     }
 
@@ -215,60 +197,167 @@ public class CommonUtils {
         return stringValue.toString();
     }
 
+    @CacheEvict(value = "spot-images", key = "#folderName", condition = "#rootFolder == 'tana-place-images'")
     public String uploadImage(
         String userName,
         Long userId,
         String folderName,
-        String uploadDir,
-        MultipartFile file
+        MultipartFile file,
+        String rootFolder
     ) {
-
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-
         try {
+            String safeRootFolder = rootFolder == null
+                ? ""
+                : rootFolder.replaceAll("[^a-zA-Z0-9-_]", "");
 
-            // ✅ sanitize folder name
             String safeFolder = folderName.replaceAll("[^a-zA-Z0-9-_]", "");
 
-            // ✅ create directory safely
-            Path dirPath = Paths.get(uploadDir, safeFolder);
-            Files.createDirectories(dirPath);
-
-            // ✅ sanitize username
             String safeUsername = userName == null
                 ? "user"
                 : userName.replaceAll("[^a-zA-Z0-9-_]", "");
 
-            // ✅ get extension safely
             String originalName = file.getOriginalFilename();
-
             String ext = "";
 
             if (originalName != null && originalName.contains(".")) {
                 ext = originalName.substring(originalName.lastIndexOf("."));
             }
 
-            // ✅ unique filename
-            String fileName = safeUsername + "-" + userId + ext;
+            String fileName =
+                safeUsername + "-" + userId + "-" + System.currentTimeMillis() + ext;
 
-            // ✅ final file path
-            Path filePath = dirPath.resolve(fileName);
+            String key = safeRootFolder.isBlank()
+                ? safeFolder + "/" + fileName
+                : safeRootFolder + "/" + safeFolder + "/" + fileName;
 
-            // ✅ save file
-            Files.copy(
-                file.getInputStream(),
-                filePath,
-                StandardCopyOption.REPLACE_EXISTING
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(file.getContentType())
+                .cacheControl("public, max-age=31536000, immutable")
+                .build();
+
+            s3Client.putObject(
+                putObjectRequest,
+                RequestBody.fromBytes(file.getBytes())
             );
 
-            // ✅ return relative path
-            return safeFolder + "/" + fileName;
+            return key;
 
-        } catch (IOException e) {
-            throw new RuntimeException("File upload failed", e);
+        } catch (Exception e) {
+            log.error("Upload Failed", e);
+            throw new RuntimeException("Upload failed", e);
         }
     }
 
+    public void deleteImage(String key) {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build());
+        } catch (Exception exception) {
+            log.error("S3 image deletion failed for key {}", key, exception);
+        }
+    }
+
+
+    @Cacheable(value = "spot-images", key = "#spotName")
+    public List<String> getSpotImages(String spotName) {
+        String sanitizedName = spotName.replaceAll("[^a-zA-Z0-9-_]", "");
+        String prefix = "tana-place-images/" + sanitizedName + "/";
+
+        try {
+            ListObjectsV2Request request = ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .prefix(prefix)
+                    .build();
+
+            ListObjectsV2Response response = s3Client.listObjectsV2(request);
+
+            if (response.contents() == null || response.contents().isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            return response.contents().stream()
+                    .map(S3Object::key)
+                    .filter(key -> !key.endsWith("/"))
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Failed to fetch spot images from S3", e);
+            return Collections.emptyList();
+        }
+    }
+
+    public Map<String, List<String>> getSpotImagesBySpotNames(Collection<String> spotNames) {
+        if (spotNames == null || spotNames.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, String> spotNamesBySanitizedName = spotNames.stream()
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toMap(
+                spotName -> spotName.replaceAll("[^a-zA-Z0-9-_]", ""),
+                spotName -> spotName,
+                (existing, ignored) -> existing
+            ));
+
+        if (spotNamesBySanitizedName.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, List<String>> imagesBySpotName = spotNamesBySanitizedName.values().stream()
+            .collect(Collectors.toMap(
+                spotName -> spotName,
+                spotName -> new ArrayList<>()
+            ));
+
+        try {
+            String continuationToken = null;
+
+            do {
+                ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .prefix("tana-place-images/");
+
+                if (continuationToken != null) {
+                    requestBuilder.continuationToken(continuationToken);
+                }
+
+                ListObjectsV2Request request = requestBuilder.build();
+
+                ListObjectsV2Response response = s3Client.listObjectsV2(request);
+
+                if (response.contents() != null && !response.contents().isEmpty()) {
+                    response.contents().stream()
+                        .map(S3Object::key)
+                        .filter(key -> !key.endsWith("/"))
+                        .forEach(key -> {
+                            String[] parts = key.split("/");
+                            if (parts.length < 3) {
+                                return;
+                            }
+
+                            String spotName = spotNamesBySanitizedName.get(parts[1]);
+                            if (spotName != null) {
+                                imagesBySpotName.get(spotName).add(key);
+                            }
+                        });
+                }
+
+                continuationToken = response.nextContinuationToken();
+            } while (continuationToken != null);
+
+            return imagesBySpotName;
+        } catch (Exception e) {
+            log.error("Failed to batch fetch spot images from S3", e);
+            return imagesBySpotName;
+        }
+    }
 }

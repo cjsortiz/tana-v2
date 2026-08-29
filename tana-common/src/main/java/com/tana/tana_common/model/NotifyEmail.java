@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "NotifyEmail")
-public class NotifyEmail {
+public class NotifyEmail extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

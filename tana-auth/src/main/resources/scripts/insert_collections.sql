@@ -30,7 +30,7 @@ INSERT IGNORE INTO CollectionsMaster (
 
 ('Heritage Walks', 'Stepping into the stories and stone walls that have stood the test of time.', 'The History Buff', 2, 'HISTORIC SITES', 'You read the walls. Every old building, every faded marker, every church that''s survived an earthquake. You''re the one who actually stops and looks.', 'Heritage Walks.png', 2, 1),
 
-('Quiet Devotion', 'Serene spaces for reflection, prayer, and finding a moment of inner peace.', 'The Devoted', 2, 'REFLECTION SPACES', 'You find something in the stillness of these spaces that''s hard to explain. Whether it''s faith, reflection, or just the quiet, you keep coming back to it.', 'Quiet Devotion.png', 1, 3),
+('Quiet Devotion', 'Serene spaces for reflection, prayer, and finding a moment of inner peace.', 'The Devoted One', 2, 'REFLECTION SPACES', 'You find something in the stillness of these spaces that''s hard to explain. Whether it''s faith, reflection, or just the quiet, you keep coming back to it.', 'Quiet Devotion.png', 1, 3),
 
 ('Collective Pulse', 'Community-driven spaces where local energy and creativity come together.', 'The Social Butterfly', 2, 'COMMUNITY SPACES', 'You find the pulse wherever you go. The gathering spaces, the creative corners, the spots where local energy is highest. You don''t just visit a city, you plug into it.', 'Collective Pulse.png', 2, 2),
 

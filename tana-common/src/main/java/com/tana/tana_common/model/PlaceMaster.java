@@ -25,7 +25,7 @@ import java.util.List;
         @Index(name = "idx_place_town", columnList = "town"),
     }
 )
-public class PlaceMaster {
+public class PlaceMaster extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -100,5 +100,11 @@ public class PlaceMaster {
 
     @OneToMany(mappedBy = "place", cascade = CascadeType.ALL)
     private List<Reflection> reflections;
+
+    @OneToMany(mappedBy = "place")
+    private List<VendorPlaceOwnership> vendorPlaceOwnerships;
+
+    @OneToMany(mappedBy = "place")
+    private List<RouteItinerary> routeItinerary;
 
 }

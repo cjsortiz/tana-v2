@@ -1,6 +1,7 @@
 package com.tana.tana_auth.functions.places.repository;
 
 import com.tana.tana_auth.functions.places.dto.DashboardImageResponse;
+import com.tana.tana_auth.functions.places.dto.SavedSpotDetailsResponseDto;
 import com.tana.tana_common.constant.enums.MainCategoryTypeEnum;
 import com.tana.tana_common.model.PlaceMaster;
 import org.apache.ibatis.annotations.Param;
@@ -37,8 +38,9 @@ public interface PlacesRepository extends JpaRepository<PlaceMaster, Long> {
     @Query(value = """
     SELECT pm.*
     FROM PlaceMaster pm
-    LEFT JOIN SpotVisited sv
+    INNER JOIN SpotVisited sv
         ON sv.placeId = pm.id
+        AND sv.isVisited = true
     GROUP BY pm.id
     ORDER BY COUNT(sv.placeId) DESC
     LIMIT 5
@@ -60,6 +62,13 @@ public interface PlacesRepository extends JpaRepository<PlaceMaster, Long> {
     """)
     List<PlaceMaster> findPlacesByMainCategory(@Param("mainCategory") MainCategoryTypeEnum mainCategory);
 
+    @Query("""
+    SELECT p
+    FROM PlaceMaster p
+    WHERE p.mainCategoryTypeEnum IN :mainCategories
+    """)
+    List<PlaceMaster> findPlacesByMainCategories(@Param("mainCategories") List<MainCategoryTypeEnum> mainCategories);
+
 
     @Query(value = """
     SELECT DISTINCT p.*
@@ -73,4 +82,40 @@ public interface PlacesRepository extends JpaRepository<PlaceMaster, Long> {
     """, nativeQuery = true)
     List<PlaceMaster> searchPlaces(@Param("keyword") String keyword);
 
+
+    @Query(
+        value =
+            "SELECT " +
+                "pm.id AS placeId, " +
+                "pm.name as name, " +
+                "cm.collectionName AS collectionName, " +
+                "CASE WHEN sv.placeId IS NOT NULL THEN true ELSE false END AS isVisited, " +
+                "NULL AS collectionImage " +
+                "FROM PlaceMaster pm " +
+
+                "INNER JOIN UserSaves us " +
+                "ON us.placeId = pm.id " +
+                "AND us.accountId = :accountId " +
+                "AND us.saved = true " +
+
+                "LEFT JOIN CollectionsCategorySelections cms " +
+                "ON cms.placeId = pm.id " +
+
+                "LEFT JOIN CollectionsMaster cm " +
+                "ON cm.collectionId = cms.collectionId " +
+
+                "LEFT JOIN SpotVisited sv " +
+                "ON sv.placeId = pm.id " +
+                "AND sv.accountId = :accountId " +
+
+                "GROUP BY " +
+                "pm.id, " +
+                "cm.collectionName, " +
+                "sv.placeId, " +
+                "pm.imageStrings",
+        nativeQuery = true
+    )
+    List<SavedSpotDetailsResponseDto> getSavedSpotsListResponse(
+        @Param("accountId") Long accountId
+    );
 }

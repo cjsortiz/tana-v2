@@ -54,31 +54,11 @@ public class AccountController {
             .build();
     }
 
-    @GetMapping("/images/{users}/{filename}")
-    public ResponseEntity<UrlResource> getImage(
-        @PathVariable String users,
-        @PathVariable String filename
-    ) throws IOException {
-
-        Path basePath = Paths.get("D:/tana-users");
-        Path filePath = basePath.resolve(users).resolve(filename).normalize();
-
-        if (!filePath.startsWith(basePath.normalize())) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        UrlResource resource = new UrlResource(filePath.toUri());
-
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        String contentType = java.nio.file.Files.probeContentType(filePath);
-        MediaType mediaType = contentType != null ? MediaType.parseMediaType(contentType) : MediaType.IMAGE_JPEG;
-
-        return ResponseEntity.ok()
-            .header("Cache-Control", "public, max-age=31536000")
-            .contentType(mediaType)
-            .body(resource);
+    @DeleteMapping
+    private TanaApiResponse deleteAccount() {
+        accountService.deleteCurrentAccount();
+        return TanaApiResponse.builder()
+            .isSuccess(true)
+            .build();
     }
 }

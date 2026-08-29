@@ -12,12 +12,20 @@ import org.springframework.stereotype.Repository;
 public interface AccountMasterRepository extends JpaRepository<AccountMaster , Long> {
 
     @Query(value = "SELECT isIpBlocked FROM AccountMaster " +
-            "WHERE userName = :userName",nativeQuery = true)
+            "WHERE userName = :userName " +
+                "OR email = :userName",nativeQuery = true)
     boolean isIpBlocked(@Param("userName") String userName);
 
     @Query(value = "SELECT * FROM AccountMaster " +
-            "WHERE userName = :userName",nativeQuery = true)
+            "WHERE userName = :userName " +
+                "OR email = :userName",nativeQuery = true)
     AccountMaster findByUserName(@Param("userName")String userName);
+
+    @Query(value = "SELECT * FROM AccountMaster " +
+            "WHERE email = :email", nativeQuery = true)
+    AccountMaster findByEmail(@Param("email") String email);
+
+    AccountMaster findByAppleSubject(String appleSubject);
 
     @Query("""
     SELECT new com.tana.tana_auth.functions.account.dto.AccountBasicDetailsDto(
@@ -36,7 +44,7 @@ public interface AccountMasterRepository extends JpaRepository<AccountMaster , L
     FROM AccountMaster a
     LEFT JOIN a.visitedSpots sv ON sv.isVisited = true
     WHERE a.id = :accountId
-    GROUP BY a.id, a.firstName, a.lastName
+    GROUP BY a.id, a.firstName, a.lastName, a.userType, a.userImage, a.userLocation, a.bio
     """)
     AccountBasicDetailsDto getAccountBasic(@Param("accountId") Long accountId);
 }

@@ -40,6 +40,9 @@ public class WebSecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/vendor/applications").permitAll()
+                .requestMatchers("/vendor/invites/**").permitAll()
+                .requestMatchers("/qr/open/**").permitAll()
 
 
                 .anyRequest().authenticated()

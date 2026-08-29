@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "AccountMaster")
-public class AccountMaster {
+public class AccountMaster extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +22,7 @@ public class AccountMaster {
     @Column(name = "userName",length = 64,nullable = false)
     private String userName;
 
-    @Column(name = "password", nullable = false, length = 60)
+    @Column(name = "password", nullable = false, length = 128)
     private String password;
 
     @Column(name = "firstName",length = 50)
@@ -36,6 +36,12 @@ public class AccountMaster {
 
     @Column(name = "email",nullable = false,unique = true)
     private String email;
+
+    @Column(name = "appleSubject", unique = true, length = 255)
+    private String appleSubject;
+
+    @Column(name = "appleRefreshToken", length = 2048)
+    private String appleRefreshToken;
 
     @Column(name ="ipAddress")
     private String ipaddress;
@@ -73,5 +79,8 @@ public class AccountMaster {
 
     @OneToMany(mappedBy = "account", fetch = FetchType.EAGER)
     private List<SpotVisited> visitedSpots;
+
+    @OneToMany(mappedBy = "vendorAccount")
+    private List<VendorPlaceOwnership> vendorPlaceOwnerships;
 
 }

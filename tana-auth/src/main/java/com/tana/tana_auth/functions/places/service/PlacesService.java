@@ -7,6 +7,10 @@ import org.apache.commons.math3.analysis.function.Tan;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 public interface PlacesService {
 
     void createPlaces(PlacesRequestDto placesRequestDto) throws TanaException;
@@ -27,11 +31,13 @@ public interface PlacesService {
         String location,
         String vibe,
         MultipartFile[] photos
-    ) throws TanaException;
+    ) throws TanaException, IOException;
 
-     Page<ReflectionResponseDto> getReflections(ReflectionRequestDto requestDto);
+    Page<ReflectionResponseDto> getReflections(ReflectionRequestDto requestDto);
 
-     void saveSpotOrCollection(SaveRequestDto requestDto) throws TanaException;
+    void saveSpotOrCollection(SaveRequestDto requestDto) throws TanaException;
 
-     SavedCollectionResponseDto fetchSavedCollections() throws TanaException;
+    SavedCollectionResponseDto fetchSavedCollections() throws TanaException;
+
+    Map<String, List<String>> fetchSpotImages(SpotImagesRequestDto requestDto);
 }

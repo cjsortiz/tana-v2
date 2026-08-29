@@ -4,9 +4,11 @@ public interface BadgeProjection {
     String getBadge();
     Long getCollectionId();
     String getCollectionName();
+    String getCollectionImage();
     Long getExplorerCount();
     Long getExploredSpotsCount();
     Long getTotalSpots();
     String getOverview();
     String getBadgeOverview();
+    String getSpotId();
 }

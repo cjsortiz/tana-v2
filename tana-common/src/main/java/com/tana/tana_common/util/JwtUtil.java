@@ -31,8 +31,8 @@ public class JwtUtil {
     /**
      * Generate a JWT token to be used for API requests from client.
      *
-     * @param username  The username of the user logging in
-     * @param userType  The type of user
+     * @param username The username of the user logging in
+     * @param userType The type of user
      * @return JWT token as string
      */
     public String generateJwtToken(final String username, final String userType) {
@@ -44,7 +44,7 @@ public class JwtUtil {
         builder.setIssuedAt(date);
         builder.setExpiration(new Date((date).getTime() + expiration));
 
-            builder.signWith(SignatureAlgorithm.HS512, secret);
+        builder.signWith(SignatureAlgorithm.HS512, secret);
         return builder.compact();
     }
 
@@ -108,9 +108,9 @@ public class JwtUtil {
     public String extractUsername(String token) {
 
         final Claims claims = Jwts.parser()
-                .setSigningKey(secret)
-                .parseClaimsJws(token)
-                .getBody();
+            .setSigningKey(secret)
+            .parseClaimsJws(token)
+            .getBody();
 
         String subject = claims.getSubject(); // username|uuid
 

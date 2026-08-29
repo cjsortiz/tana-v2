@@ -14,12 +14,16 @@ public class TanaException extends RuntimeException {
 
     private String errorMessage;
 
+    private Integer code;
+
     public TanaException(CustomCodeErrors errors) {
         super(errors.getMessage());
 
         this.messageCode = errors.getStringCode();
 
         this.errorMessage = errors.getMessage();
+
+        this.code = errors.getCode();
     }
 }
 

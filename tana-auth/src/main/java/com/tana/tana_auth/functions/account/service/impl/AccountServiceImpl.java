@@ -5,6 +5,7 @@ import com.tana.tana_auth.functions.account.dto.*;
 import com.tana.tana_auth.functions.account.repository.AccountMasterRepository;
 import com.tana.tana_auth.functions.collections.service.CollectionService;
 import com.tana.tana_auth.functions.login.repository.NotifyEmailRepository;
+import com.tana.tana_auth.functions.login.service.AppleTokenService;
 import com.tana.tana_auth.functions.account.service.AccountService;
 import com.tana.tana_auth.functions.collections.repository.CollectionRepository;
 import com.tana.tana_common.constant.CustomCodeErrors;
@@ -18,7 +19,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,6 +51,12 @@ public class AccountServiceImpl implements AccountService {
     @Autowired
     private CommonUtils commonUtils;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private AppleTokenService appleTokenService;
+
     @Override
     @Cacheable(
         value = "user-details",
@@ -65,7 +74,7 @@ public class AccountServiceImpl implements AccountService {
         Long explored = collectionRepository.getCollectionExploredCount(accountId);
         List<Long> completedCollections = collectionRepository.getCompletedCollections(accountId);
 
-        return AccountResponseDto.builder()
+        AccountResponseDto responseDto = AccountResponseDto.builder()
             .userType(basicDetailsDto.getUserType())
             .accountId(basicDetailsDto.getAccountId())
             .displayName(formatName(basicDetailsDto.getFirstName()))
@@ -79,6 +88,8 @@ public class AccountServiceImpl implements AccountService {
             .userLocation(basicDetailsDto.getUserLocation())
             .bio(basicDetailsDto.getBio())
             .build();
+
+        return  responseDto;
     }
 
     @Transactional
@@ -126,7 +137,7 @@ public class AccountServiceImpl implements AccountService {
 
         if(!ObjectUtils.isEmpty(file)) {
             String imageString = commonUtils.uploadImage(user.getFirstName(),user.getId(),
-                "users",uploadDir,file);
+                "users",file, null);
 
             user.setUserImage(imageString);
         }
@@ -171,7 +182,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     public List<BadgeResponseDto> getBadges(Long accountId) {
-
         // spots grouped by collectionId
         Map<Long, List<BadgeSpotsDto>> spotMap = collectionRepository
             .getCollectionSpots(accountId)
@@ -179,7 +189,11 @@ public class AccountServiceImpl implements AccountService {
             .collect(Collectors.groupingBy(
                 SpotProgressProjection::getCollectionId,
                 Collectors.mapping(
-                    p -> new BadgeSpotsDto(p.getSpotName(), p.getIsVisited()),
+                    p -> new BadgeSpotsDto(
+                        p.getSpotName(),
+                        p.getIsVisited(),
+                        List.of()
+                    ),
                     Collectors.toList()
                 )
             ));
@@ -191,13 +205,48 @@ public class AccountServiceImpl implements AccountService {
                 p.getBadge(),
                 p.getCollectionId(),
                 p.getCollectionName(),
+                p.getCollectionImage(),
                 p.getExplorerCount(),
                 p.getExploredSpotsCount(),
                 p.getTotalSpots(),
                 p.getOverview(),
                 p.getBadgeOverview(),
-                spotMap.getOrDefault(p.getCollectionId(), List.of())
+                spotMap.getOrDefault(p.getCollectionId(), List.of()),
+                p.getSpotId()
             ))
             .toList();
+    }
+
+    @Override
+    @Transactional(rollbackOn = Exception.class)
+    @CacheEvict(value = "user-details", allEntries = true)
+    public void deleteCurrentAccount() throws TanaException {
+        Long accountId = authConfig.getCurrentUserId();
+        AccountMaster account = accountMasterRepository.findById(accountId)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+
+        appleTokenService.revoke(account.getAppleRefreshToken());
+        List<String> reflectionImages = jdbcTemplate.queryForList(
+            "SELECT image FROM Reflection WHERE accountId = ? AND image IS NOT NULL",
+            String.class,
+            accountId);
+
+        jdbcTemplate.update(
+            "UPDATE VendorInvite SET acceptedAccountId = NULL WHERE acceptedAccountId = ?",
+            accountId);
+        jdbcTemplate.update(
+            "DELETE FROM VendorPlaceOwnership WHERE vendorAccountId = ?",
+            accountId);
+        jdbcTemplate.update("DELETE FROM NotificationInbox WHERE accountId = ?", accountId);
+        jdbcTemplate.update("DELETE FROM PushNotificationToken WHERE accountId = ?", accountId);
+        jdbcTemplate.update("DELETE FROM Reflection WHERE accountId = ?", accountId);
+        jdbcTemplate.update("DELETE FROM UserSaves WHERE accountId = ?", accountId);
+        jdbcTemplate.update("DELETE FROM SpotVisited WHERE accountId = ?", accountId);
+        jdbcTemplate.update("DELETE FROM SessionToken WHERE accountMaster = ?", accountId);
+        jdbcTemplate.update("DELETE FROM AccountMaster WHERE id = ?", accountId);
+
+        commonUtils.deleteImage(account.getUserImage());
+        reflectionImages.forEach(commonUtils::deleteImage);
+        SecurityContextHolder.clearContext();
     }
 }

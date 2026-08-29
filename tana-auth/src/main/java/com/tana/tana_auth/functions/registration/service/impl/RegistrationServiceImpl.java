@@ -63,10 +63,12 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         AccountMaster newAccount = new AccountMaster();
         newAccount.setUserName(request.getUsername());
-        newAccount.setPreferLang(request.getPreferLang());
-        newAccount.setPreferMood(request.getPreferMood());
+        newAccount.setPreferLang(ObjectUtils.isEmpty(request.getPreferLang()) ? "en" :request.getPreferLang());
+        newAccount.setPreferMood(ObjectUtils.isEmpty(request.getPreferMood()) ? "1" :request.getPreferMood());
         if (!ObjectUtils.isEmpty(request.getUserType())) {
             newAccount.setUserType(UserTypeEnum.fromCode(request.getUserType()).getValue());
+        } else {
+            newAccount.setUserType(UserTypeEnum.LOCAL.getValue());
         }
         newAccount.setPassword(passwordUtil.encrypt(request.getPassword(), encryptionProperties.getKeyConfig(),
             encryptionProperties.getSalt()));
