@@ -56,6 +56,8 @@ import java.util.stream.IntStream;
 public class PlacesServiceImpl implements PlacesService {
     private static final int MAX_SUGGESTION_PHOTOS = 2;
     private static final long MAX_SUGGESTION_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+    private static final double EXPLORE_NEARBY_RADIUS_KM = 5.0;
+    private static final double EARTH_RADIUS_KM = 6371.0088;
 
     @Value("${S3_BUCKET_NAME}")
     private String bucketName;
@@ -184,12 +186,16 @@ public class PlacesServiceImpl implements PlacesService {
     @Override
     @Cacheable(
         value = "place-list",
-        key = "T(String).format('%s-%s-%s-%s-%s', " +
+        key = "T(String).format('%s-%s-%s-%s-%s-%s-%s-%s-%s', " +
             "@authConfig.getCurrentUserId(), " +
             "#requestDto == null ? 'null' : #requestDto.placeId, " +
             "#requestDto == null ? 'null' : #requestDto.collectionId, " +
             "#requestDto == null ? 'null' : #requestDto.mainCategory, " +
-            "#requestDto == null ? 'null' : #requestDto.search)"
+            "#requestDto == null ? 'null' : #requestDto.search, " +
+            "#requestDto == null ? 'null' : #requestDto.nearbyOnly, " +
+            "#requestDto == null ? 'null' : #requestDto.savedOnly, " +
+            "#requestDto == null ? 'null' : #requestDto.latitude, " +
+            "#requestDto == null ? 'null' : #requestDto.longitude)"
     )
     public PlacesListResponseDto fetchAllPlaces(ExploreMapRequestDto requestDto) {
         if (ObjectUtils.isEmpty(requestDto)) {
@@ -209,8 +215,8 @@ public class PlacesServiceImpl implements PlacesService {
             placeMasters = repository.findPlacesByMainCategories(
                 resolveMainCategoryFilter(requestDto.getMainCategory())
             );
-        } else if (!ObjectUtils.isEmpty(requestDto.getSearch())) {
-            placeMasters = repository.searchPlaces(requestDto.getSearch());
+        } else if (Boolean.TRUE.equals(requestDto.getSavedOnly())) {
+            placeMasters = userSaveRepository.findSavedPlaces(authConfig.getCurrentUserId());
         } else {
             placeMasters = repository.findAll();
         }
@@ -224,9 +230,44 @@ public class PlacesServiceImpl implements PlacesService {
                 .map(this::buildPlaceDetailsResponseDto
                 ).toList();
 
+        if (Boolean.TRUE.equals(requestDto.getNearbyOnly())) {
+            if (requestDto.getLatitude() == null || requestDto.getLongitude() == null) {
+                return PlacesListResponseDto.builder().placeList(List.of()).build();
+            }
+
+            placesDetailsResponseDtoList = placesDetailsResponseDtoList.stream()
+                .peek(place -> place.setDistanceKm(distanceKm(
+                    requestDto.getLatitude(), requestDto.getLongitude(),
+                    parseCoordinate(place.getLatitude()), parseCoordinate(place.getLongitude()))))
+                .filter(place -> place.getDistanceKm() <= EXPLORE_NEARBY_RADIUS_KM)
+                .sorted(Comparator.comparingDouble(PlacesDetailsResponseDto::getDistanceKm))
+                .toList();
+        }
+
         return PlacesListResponseDto.builder()
             .placeList(placesDetailsResponseDtoList)
             .build();
+    }
+
+    private Double parseCoordinate(String value) {
+        try {
+            return value == null ? null : Double.valueOf(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private double distanceKm(double latitude, double longitude, Double placeLatitude, Double placeLongitude) {
+        if (placeLatitude == null || placeLongitude == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        double latitudeDelta = Math.toRadians(placeLatitude - latitude);
+        double longitudeDelta = Math.toRadians(placeLongitude - longitude);
+        double a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
+            + Math.cos(Math.toRadians(latitude)) * Math.cos(Math.toRadians(placeLatitude))
+            * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
+        return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private List<MainCategoryTypeEnum> resolveMainCategoryFilter(String mainCategory) {
@@ -472,10 +513,10 @@ public class PlacesServiceImpl implements PlacesService {
         }
     }
 
-    @CacheEvict(
-        value = "saved-list",
-        key = "@authConfig.getCurrentUserId()"
-    )
+    @Caching(evict = {
+        @CacheEvict(value = "saved-list", key = "@authConfig.getCurrentUserId()"),
+        @CacheEvict(value = "place-list", allEntries = true)
+    })
     @Transactional
     @Override
     public void saveSpotOrCollection(SaveRequestDto requestDto) throws TanaException {

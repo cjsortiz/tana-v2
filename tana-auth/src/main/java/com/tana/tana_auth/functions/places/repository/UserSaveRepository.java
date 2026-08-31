@@ -2,6 +2,7 @@ package com.tana.tana_auth.functions.places.repository;
 
 import com.tana.tana_auth.functions.collections.dto.CollectionsResponseDto;
 import com.tana.tana_common.model.UserSaves;
+import com.tana.tana_common.model.PlaceMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,15 @@ import java.util.Optional;
 
 @Repository
 public interface UserSaveRepository extends JpaRepository<UserSaves, Long> {
+
+    @Query("""
+    SELECT DISTINCT us.place
+    FROM UserSaves us
+    WHERE us.account.id = :accountId
+      AND us.place IS NOT NULL
+      AND us.saved = true
+    """)
+    List<PlaceMaster> findSavedPlaces(@Param("accountId") Long accountId);
 
     @Query("""
     SELECT us

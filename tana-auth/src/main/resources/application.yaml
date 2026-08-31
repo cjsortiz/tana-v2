@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
   application:
     name: Tana
   sql:
@@ -99,7 +101,7 @@ apple:
 app:
   account-path: C:\Users\Owner\Documents\Image\AccountMaster
   user-path: C:\\Users\\Owner\\Documents\\Image\\Users
-  excel-path: ${EXCEL_PATH:C:\\Users\\cj\\Documents\\tana-excel\\tana_master.xlsx}
+  excel-path: ${EXCEL_PATH:C:\\Users\\Celmar Ortiz\\Documents\\tana-excel\\tana_master.xlsx}
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
     service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
@@ -123,7 +125,7 @@ encryption:
   salt: ${SALT_KEY}
 
 allowed:
-  origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://172.20.10.4:808,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
+  origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://192.168.100.40:8080,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
 
   flyway:
     enabled: true

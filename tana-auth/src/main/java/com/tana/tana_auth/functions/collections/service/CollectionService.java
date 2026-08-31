@@ -13,6 +13,7 @@ import com.tana.tana_auth.functions.collections.dto.TanaStoryResponseDto;
 import com.tana.tana_common.constant.exception.TanaException;
 import com.tana.tana_common.model.CollectionsMaster;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,6 +27,7 @@ public interface CollectionService {
     CuratorSpotResponseDto saveCuratorSpot(CuratorSpotRequestDto requestDto) throws TanaException;
     List<TanaStoryResponseDto> getAdminTanaStories();
     TanaStoryResponseDto saveTanaStory(TanaStoryRequestDto requestDto) throws TanaException;
+    TanaStoryResponseDto saveTanaStory(TanaStoryRequestDto requestDto, MultipartFile file) throws TanaException;
     CollectionsListResponseDto getCollectionsList();
     HomeV2ResponseDto getHomeV2();
     CollectionDetailsResponseDto getCollectionDetails(CollectionDetailsRequestDto requestDto) throws TanaException;

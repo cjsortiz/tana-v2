@@ -19,6 +19,7 @@ public class PlacesDetailsResponseDto {
     private String overview;
     private String latitude;
     private String longitude;
+    private Double distanceKm;
     private boolean isVisited;
     private List<String> subCategories;
     private int visitCount;

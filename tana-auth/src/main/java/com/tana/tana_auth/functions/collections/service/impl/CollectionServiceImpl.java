@@ -27,6 +27,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -159,6 +160,18 @@ public class CollectionServiceImpl implements CollectionService {
         @CacheEvict(value = "home-v2-response", allEntries = true)
     })
     public TanaStoryResponseDto saveTanaStory(TanaStoryRequestDto requestDto) throws TanaException {
+        return saveTanaStory(requestDto, null);
+    }
+
+    @Override
+    @Caching(evict = {
+        @CacheEvict(value = "collections-list-response", allEntries = true),
+        @CacheEvict(value = "home-v2-response", allEntries = true)
+    })
+    public TanaStoryResponseDto saveTanaStory(
+        TanaStoryRequestDto requestDto,
+        MultipartFile file
+    ) throws TanaException {
         TanaStory story = Optional.ofNullable(requestDto.getTanaStoryId())
             .flatMap(tanaStoryRepository::findById)
             .orElseGet(TanaStory::new);
@@ -168,11 +181,30 @@ public class CollectionServiceImpl implements CollectionService {
         story.setTag(trimToNull(requestDto.getTag()));
         story.setCategory(trimToNull(requestDto.getCategory()));
         story.setDescription(trimToNull(requestDto.getDescription()));
+        String previousImage = story.getImage();
         story.setImage(trimToNull(requestDto.getImage()));
         story.setDisplayOrder(Optional.ofNullable(requestDto.getDisplayOrder()).orElse(1));
         story.setActive(Optional.ofNullable(requestDto.getActive()).orElse(true));
 
-        return toTanaStoryDto(tanaStoryRepository.save(story));
+        TanaStory savedStory = tanaStoryRepository.save(story);
+
+        if (file != null && !file.isEmpty()) {
+            String uploadedImage = commonUtils.uploadImage(
+                "admin",
+                savedStory.getTanaStoryId(),
+                savedStory.getTitle(),
+                file,
+                "tana-story-images"
+            );
+            savedStory.setImage(uploadedImage);
+            savedStory = tanaStoryRepository.save(savedStory);
+
+            if (previousImage != null && !previousImage.equals(uploadedImage)) {
+                commonUtils.deleteImage(previousImage);
+            }
+        }
+
+        return toTanaStoryDto(savedStory);
     }
 
     private CollectionAdminOptionDto toAdminOption(CollectionsMaster collection) {

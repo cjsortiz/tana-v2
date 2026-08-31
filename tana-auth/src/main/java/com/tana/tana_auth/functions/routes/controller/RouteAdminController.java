@@ -7,17 +7,23 @@ import com.tana.tana_auth.functions.routes.dto.RouteRequestDto;
 import com.tana.tana_auth.functions.routes.service.RouteAdminService;
 import com.tana.tana_common.constant.dto.TanaApiResponse;
 import com.tana.tana_common.constant.exception.TanaException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping(value = "/routes")
 public class RouteAdminController {
 
     private final RouteAdminService routeAdminService;
+    private final ObjectMapper objectMapper;
 
-    public RouteAdminController(RouteAdminService routeAdminService) {
+    public RouteAdminController(RouteAdminService routeAdminService, ObjectMapper objectMapper) {
         this.routeAdminService = routeAdminService;
+        this.objectMapper = objectMapper;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -68,12 +74,26 @@ public class RouteAdminController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/admin")
+    @PostMapping(value = "/admin", consumes = MediaType.APPLICATION_JSON_VALUE)
     public TanaApiResponse createRoute(@RequestBody RouteRequestDto requestDto)
         throws TanaException {
         return TanaApiResponse.builder()
             .isSuccess(true)
             .resultData(routeAdminService.createRoute(requestDto))
+            .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/admin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TanaApiResponse createRouteWithImage(
+        @RequestPart("route") String routeJson,
+        @RequestPart("file") MultipartFile file
+    ) throws TanaException, JsonProcessingException {
+        RouteRequestDto requestDto = objectMapper.readValue(routeJson, RouteRequestDto.class);
+
+        return TanaApiResponse.builder()
+            .isSuccess(true)
+            .resultData(routeAdminService.createRoute(requestDto, file))
             .build();
     }
 

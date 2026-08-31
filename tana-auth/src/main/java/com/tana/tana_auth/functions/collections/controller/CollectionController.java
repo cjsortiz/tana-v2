@@ -7,11 +7,14 @@ import com.tana.tana_auth.functions.collections.dto.TanaStoryRequestDto;
 import com.tana.tana_auth.functions.collections.service.CollectionService;
 import com.tana.tana_common.constant.dto.TanaApiResponse;
 import com.tana.tana_common.constant.exception.TanaException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -22,9 +25,11 @@ import java.nio.file.Paths;
 public class CollectionController {
 
     private final CollectionService collectionService;
+    private final ObjectMapper objectMapper;
 
-    public CollectionController(CollectionService collectionService) {
+    public CollectionController(CollectionService collectionService, ObjectMapper objectMapper) {
         this.collectionService = collectionService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping(value = "/getList")
@@ -89,11 +94,25 @@ public class CollectionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/admin/tana-stories")
+    @PostMapping(value = "/admin/tana-stories", consumes = MediaType.APPLICATION_JSON_VALUE)
     public TanaApiResponse saveTanaStory(@RequestBody TanaStoryRequestDto requestDto) throws TanaException {
         return TanaApiResponse.builder()
                 .isSuccess(true)
                 .resultData(collectionService.saveTanaStory(requestDto))
+                .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/admin/tana-stories", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TanaApiResponse saveTanaStoryWithImage(
+        @RequestPart("story") String storyJson,
+        @RequestPart("file") MultipartFile file
+    ) throws TanaException, JsonProcessingException {
+        TanaStoryRequestDto requestDto = objectMapper.readValue(storyJson, TanaStoryRequestDto.class);
+
+        return TanaApiResponse.builder()
+                .isSuccess(true)
+                .resultData(collectionService.saveTanaStory(requestDto, file))
                 .build();
     }
 

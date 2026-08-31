@@ -28,6 +28,7 @@ import com.tana.tana_common.model.SpotVisited;
 import com.tana.tana_common.util.CommonUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -125,6 +126,11 @@ public class RouteAdminServiceImpl implements RouteAdminService {
 
     @Override
     public RouteResponseDto createRoute(RouteRequestDto requestDto) throws TanaException {
+        return createRoute(requestDto, null);
+    }
+
+    @Override
+    public RouteResponseDto createRoute(RouteRequestDto requestDto, MultipartFile file) throws TanaException {
         RouteCategories category = routeCategoryRepository.findById(
             Optional.ofNullable(requestDto.getRouteCategoryId()).orElse(0L)
         ).orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
@@ -143,6 +149,7 @@ public class RouteAdminServiceImpl implements RouteAdminService {
         route.setRouteDuration(trimToNull(requestDto.getRouteDuration()));
         route.setOverview(trimToNull(requestDto.getOverview()));
         route.setHelperText(trimToNull(requestDto.getHelperText()));
+        String previousImage = route.getRouteImage();
         route.setRouteImage(trimToNull(requestDto.getRouteImage()));
         route.setTags(Optional.ofNullable(requestDto.getTags()).orElse(List.of())
             .stream()
@@ -150,7 +157,25 @@ public class RouteAdminServiceImpl implements RouteAdminService {
             .filter(tag -> !tag.isBlank())
             .toList());
 
-        return toRouteDto(routeRepository.save(route), List.of());
+        RouteMaster savedRoute = routeRepository.save(route);
+
+        if (file != null && !file.isEmpty()) {
+            String uploadedImage = commonUtils.uploadImage(
+                "admin",
+                savedRoute.getRouteId(),
+                savedRoute.getRouteName(),
+                file,
+                "tana-route-images"
+            );
+            savedRoute.setRouteImage(uploadedImage);
+            savedRoute = routeRepository.save(savedRoute);
+
+            if (previousImage != null && !previousImage.equals(uploadedImage)) {
+                commonUtils.deleteImage(previousImage);
+            }
+        }
+
+        return toRouteDto(savedRoute, List.of());
     }
 
     @Override

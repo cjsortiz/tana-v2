@@ -2,10 +2,13 @@ package com.tana.tana_common.util;
 
 import com.tana.tana_common.constant.CommonConstants;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 
@@ -29,6 +32,16 @@ public class JwtUtil {
     }
 
     /**
+     * Treat jwt.key as the configured secret text, rather than as an implicitly
+     * Base64-encoded value. The deprecated String overload decodes the value as
+     * Base64 and can therefore turn an otherwise long secret into an undersized
+     * HS512 key.
+     */
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
      * Generate a JWT token to be used for API requests from client.
      *
      * @param username The username of the user logging in
@@ -44,7 +57,7 @@ public class JwtUtil {
         builder.setIssuedAt(date);
         builder.setExpiration(new Date((date).getTime() + expiration));
 
-        builder.signWith(SignatureAlgorithm.HS512, secret);
+        builder.signWith(getSigningKey(), SignatureAlgorithm.HS512);
         return builder.compact();
     }
 
@@ -61,7 +74,7 @@ public class JwtUtil {
         builder.setSubject(userType + CommonConstants.USER_DELIMITER + uid);
         builder.setIssuedAt(date);
         builder.setExpiration(expiryDate);
-        builder.signWith(SignatureAlgorithm.HS512, secret);
+        builder.signWith(getSigningKey(), SignatureAlgorithm.HS512);
         return builder.compact();
     }
 
@@ -72,8 +85,9 @@ public class JwtUtil {
      * @return Username of the user as {@link String}.
      */
     public String getSubjectFromJwtToken(String token) {
-        var parser = Jwts.parser();
-        parser.setSigningKey(secret);
+        var parser = Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build();
         var parsed = parser.parseClaimsJws(token);
         var body = parsed.getBody();
         return body.getSubject();
@@ -87,8 +101,9 @@ public class JwtUtil {
      */
     public boolean validateJwtToken(String authToken) {
         try {
-            var parser = Jwts.parser();
-            parser.setSigningKey(secret);
+            var parser = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build();
             Jws<Claims> claims = parser.parseClaimsJws(authToken);
             return true;
         } catch (MalformedJwtException e) {
@@ -107,8 +122,9 @@ public class JwtUtil {
 
     public String extractUsername(String token) {
 
-        final Claims claims = Jwts.parser()
-            .setSigningKey(secret)
+        final Claims claims = Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
             .parseClaimsJws(token)
             .getBody();
 

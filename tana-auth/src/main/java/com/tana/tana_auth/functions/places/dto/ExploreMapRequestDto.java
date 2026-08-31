@@ -15,5 +15,9 @@ public class ExploreMapRequestDto {
     private Long collectionId;
     private String mainCategory;
     private String search;
+    private Boolean nearbyOnly;
+    private Boolean savedOnly;
+    private Double latitude;
+    private Double longitude;
 
 }
