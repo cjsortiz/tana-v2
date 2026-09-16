@@ -18,9 +18,12 @@ public interface RouteAdminService {
     RouteCategoryResponseDto createRouteCategory(RouteCategoryRequestDto requestDto) throws TanaException;
     List<RoutePartnerResponseDto> getRoutePartners();
     RoutePartnerResponseDto createRoutePartner(RoutePartnerRequestDto requestDto) throws TanaException;
+    RoutePartnerResponseDto createRoutePartner(RoutePartnerRequestDto requestDto, MultipartFile file) throws TanaException;
     List<RouteResponseDto> getRoutes();
     RouteResponseDto createRoute(RouteRequestDto requestDto) throws TanaException;
     RouteResponseDto createRoute(RouteRequestDto requestDto, MultipartFile file) throws TanaException;
     List<RouteItineraryResponseDto> getRouteItinerary();
     RouteItineraryResponseDto createRouteItinerary(RouteItineraryRequestDto requestDto) throws TanaException;
+    RouteItineraryResponseDto updateRouteItinerary(Long itineraryId, RouteItineraryRequestDto requestDto) throws TanaException;
+    void deleteRouteItinerary(Long itineraryId) throws TanaException;
 }

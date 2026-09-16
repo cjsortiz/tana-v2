@@ -103,6 +103,23 @@ public class CollectionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TanaApiResponse createCollectionWithImages(
+        @RequestPart("collection") String collectionJson,
+        @RequestPart(value = "collectionImage", required = false) MultipartFile collectionImage,
+        @RequestPart(value = "badgeImage", required = false) MultipartFile badgeImage
+    ) throws TanaException, JsonProcessingException {
+        CollectionCreateRequestDto requestDto = objectMapper.readValue(
+            collectionJson,
+            CollectionCreateRequestDto.class
+        );
+        return TanaApiResponse.builder()
+            .isSuccess(true)
+            .resultData(collectionService.createCollection(requestDto, collectionImage, badgeImage))
+            .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/admin/tana-stories", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public TanaApiResponse saveTanaStoryWithImage(
         @RequestPart("story") String storyJson,

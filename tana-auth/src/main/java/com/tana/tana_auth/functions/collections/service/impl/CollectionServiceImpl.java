@@ -26,6 +26,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -99,6 +100,16 @@ public class CollectionServiceImpl implements CollectionService {
         @CacheEvict(value = "home-v2-response", allEntries = true)
     })
     public CollectionAdminOptionDto createCollection(CollectionCreateRequestDto requestDto) throws TanaException {
+        return createCollection(requestDto, null, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CollectionAdminOptionDto createCollection(
+        CollectionCreateRequestDto requestDto,
+        MultipartFile collectionImage,
+        MultipartFile badgeImage
+    ) throws TanaException {
         String collectionName = requireText(requestDto.getCollectionName());
         String segment = requireText(requestDto.getSegment());
         Spot spot = spotRepository.findBySpotNameIgnoreCase(segment)
@@ -115,7 +126,47 @@ public class CollectionServiceImpl implements CollectionService {
         collection.setMoodPriority(requestDto.getMoodPriority());
         collection.setSpot(spot);
 
-        return toAdminOption(collectionRepository.save(collection));
+        CollectionsMaster savedCollection = collectionRepository.save(collection);
+
+        if (collectionImage != null && !collectionImage.isEmpty()) {
+            savedCollection.setCollectionImage(commonUtils.uploadImage(
+                "admin",
+                savedCollection.getCollectionId(),
+                savedCollection.getCollectionName(),
+                collectionImage,
+                "tana-collection-images"
+            ));
+        }
+        if (badgeImage != null && !badgeImage.isEmpty()) {
+            savedCollection.setBadgeImage(commonUtils.uploadImage(
+                "admin",
+                savedCollection.getCollectionId(),
+                savedCollection.getCollectionName() + " badge",
+                badgeImage,
+                "tana-badge-images"
+            ));
+        }
+        savedCollection = collectionRepository.save(savedCollection);
+
+        List<CollectionSpotRequestDto> requestedSpots = Optional.ofNullable(requestDto.getSpots())
+            .orElse(List.of());
+        Set<Long> seenPlaceIds = new HashSet<>();
+        List<CollectionsCategorySelections> selections = new ArrayList<>();
+        for (CollectionSpotRequestDto requestedSpot : requestedSpots) {
+            Long placeId = requestedSpot.getPlaceId();
+            if (placeId == null || !seenPlaceIds.add(placeId)) {
+                continue;
+            }
+            PlaceMaster place = placesRepository.findById(placeId)
+                .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+            selections.add(CollectionsCategorySelections.builder()
+                .collection(savedCollection)
+                .place(place)
+                .displayOrder(Optional.ofNullable(requestedSpot.getDisplayOrder()).orElse(1))
+                .build());
+        }
+        categorySelectionRepository.saveAll(selections);
+        return toAdminOption(savedCollection);
     }
 
     @Override
@@ -212,6 +263,8 @@ public class CollectionServiceImpl implements CollectionService {
             .collectionId(collection.getCollectionId())
             .collectionName(collection.getCollectionName())
             .segment(collection.getSpot() == null ? null : collection.getSpot().getSpotName())
+            .collectionImage(collection.getCollectionImage())
+            .badgeImage(collection.getBadgeImage())
             .build();
     }
 

@@ -32,10 +32,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Skip filter for public auth and vendor acquisition endpoints.
+        // Skip token enforcement for endpoints that are intentionally public.
         if (path.startsWith("/api/auth")
                 || path.equals("/api/vendor/applications")
-                || path.startsWith("/api/vendor/invites/")) {
+                || path.startsWith("/api/vendor/invites/")
+                || path.startsWith("/api/qr/open/")) {
             filterChain.doFilter(request, response);
             return;
         }

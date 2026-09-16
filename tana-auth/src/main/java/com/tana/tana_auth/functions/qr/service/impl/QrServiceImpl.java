@@ -1,5 +1,6 @@
 package com.tana.tana_auth.functions.qr.service.impl;
 
+import com.tana.tana_auth.config.AuthConfig;
 import com.tana.tana_auth.functions.collections.repository.CollectionRepository;
 import com.tana.tana_auth.functions.places.repository.PlacesRepository;
 import com.tana.tana_auth.functions.qr.dto.QrAnalyticsDto;
@@ -21,6 +22,7 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -30,6 +32,7 @@ public class QrServiceImpl implements QrService {
     private final CollectionRepository collectionRepository;
     private final PlacesRepository placesRepository;
     private final RouteRepository routeRepository;
+    private final AuthConfig authConfig;
 
     @Value("${qr.ios-app-store-url:https://apps.apple.com/ph/search?term=tana}")
     private String iosAppStoreUrl;
@@ -44,12 +47,14 @@ public class QrServiceImpl implements QrService {
         QrScanEventRepository qrScanEventRepository,
         CollectionRepository collectionRepository,
         PlacesRepository placesRepository,
-        RouteRepository routeRepository
+        RouteRepository routeRepository,
+        AuthConfig authConfig
     ) {
         this.qrScanEventRepository = qrScanEventRepository;
         this.collectionRepository = collectionRepository;
         this.placesRepository = placesRepository;
         this.routeRepository = routeRepository;
+        this.authConfig = authConfig;
     }
 
     @Override
@@ -68,12 +73,29 @@ public class QrServiceImpl implements QrService {
         event.setQrType(qrType);
         event.setTargetId(targetId);
         event.setScannerHash(hashScanner(request, userAgent));
+        event.setScanToken(UUID.randomUUID().toString());
         event.setPlatform(detectPlatform(userAgent));
         event.setUserAgent(truncate(userAgent, 512));
         event.setScannedAt(LocalDateTime.now());
         qrScanEventRepository.save(event);
 
-        return handoffPage(qrType, targetId, appUrl);
+        return handoffPage(qrType, targetId, event.getScanToken(), appUrl);
+    }
+
+    @Override
+    @Transactional
+    public void claimScan(String scanToken) {
+        QrScanEvent event = qrScanEventRepository.findByScanToken(scanToken)
+            .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "QR scan not found"));
+        Long currentAccountId = authConfig.getCurrentUserId();
+        if (event.getAccountId() != null && !event.getAccountId().equals(currentAccountId)) {
+            throw new ResponseStatusException(NOT_FOUND, "QR scan not found");
+        }
+        if (event.getAccountId() == null) {
+            event.setAccountId(currentAccountId);
+            event.setClaimedAt(LocalDateTime.now());
+            qrScanEventRepository.save(event);
+        }
     }
 
     @Override
@@ -86,6 +108,8 @@ public class QrServiceImpl implements QrService {
             .collectionUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.COLLECTION))
             .spotScans(qrScanEventRepository.countByQrType(QrType.SPOT))
             .spotUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.SPOT))
+            .routeScans(qrScanEventRepository.countByQrType(QrType.ROUTE))
+            .routeUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.ROUTE))
             .downloadScans(qrScanEventRepository.countByQrType(QrType.DOWNLOAD))
             .downloadUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.DOWNLOAD))
             .targets(qrScanEventRepository.findTargetAnalytics().stream()
@@ -140,14 +164,15 @@ public class QrServiceImpl implements QrService {
         return "OTHER";
     }
 
-    private String handoffPage(QrType type, Long targetId, String requestedAppUrl) {
+    private String handoffPage(QrType type, Long targetId, String scanToken, String requestedAppUrl) {
         String typeValue = type.name().toLowerCase(Locale.ROOT);
         String targetQuery = targetId == null ? "" : "&id=" + targetId;
+        String scanQuery = "&scan=" + scanToken;
         boolean expoGoTarget = isExpoGoUrl(requestedAppUrl);
         String deepLink = expoGoTarget
-            ? requestedAppUrl
-            : "tanav2://qr-open?type=" + typeValue + targetQuery;
-        String androidIntent = "intent://qr-open?type=" + typeValue + targetQuery
+            ? appendQuery(requestedAppUrl, "scan", scanToken)
+            : "tanav2://qr-open?type=" + typeValue + targetQuery + scanQuery;
+        String androidIntent = "intent://qr-open?type=" + typeValue + targetQuery + scanQuery
             + "#Intent;scheme=tanav2;package=com.app.tana;"
             + "S.browser_fallback_url=" + encodeUrl(androidPlayStoreUrl) + ";end";
 
@@ -194,6 +219,11 @@ public class QrServiceImpl implements QrService {
                 escapeJs(iosAppStoreUrl),
                 expoGoTarget
             );
+    }
+
+    private String appendQuery(String url, String name, String value) {
+        if (url == null || url.isBlank()) return url;
+        return url + (url.contains("?") ? "&" : "?") + name + "=" + encodeUrl(value);
     }
 
     private boolean isExpoGoUrl(String value) {

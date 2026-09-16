@@ -4,6 +4,8 @@ import com.tana.tana_auth.functions.places.dto.*;
 import com.tana.tana_auth.functions.places.service.PlacesService;
 import com.tana.tana_common.constant.dto.TanaApiResponse;
 import com.tana.tana_common.constant.exception.TanaException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +22,11 @@ import java.nio.file.Paths;
 public class PlacesController {
 
     private final PlacesService placesService;
+    private final ObjectMapper objectMapper;
 
-    public PlacesController(PlacesService placesService) {
+    public PlacesController(PlacesService placesService, ObjectMapper objectMapper) {
         this.placesService = placesService;
+        this.objectMapper = objectMapper;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -32,6 +36,17 @@ public class PlacesController {
         return TanaApiResponse.builder()
             .isSuccess(true)
             .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TanaApiResponse createPlacesWithImage(
+        @RequestPart("place") String placeJson,
+        @RequestPart("file") MultipartFile file
+    ) throws TanaException, JsonProcessingException {
+        PlacesRequestDto requestDto = objectMapper.readValue(placeJson, PlacesRequestDto.class);
+        placesService.createPlaces(requestDto, file);
+        return TanaApiResponse.builder().isSuccess(true).build();
     }
 
     @PostMapping(value = "/dashboard")

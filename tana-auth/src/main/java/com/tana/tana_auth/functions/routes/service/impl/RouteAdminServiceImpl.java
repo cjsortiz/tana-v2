@@ -96,16 +96,40 @@ public class RouteAdminServiceImpl implements RouteAdminService {
 
     @Override
     public RoutePartnerResponseDto createRoutePartner(RoutePartnerRequestDto requestDto) throws TanaException {
+        return createRoutePartner(requestDto, null);
+    }
+
+    @Override
+    public RoutePartnerResponseDto createRoutePartner(
+        RoutePartnerRequestDto requestDto,
+        MultipartFile file
+    ) throws TanaException {
         String partnerName = requireText(requestDto.getPartnerName());
         RoutePartners partner = routePartnerRepository.findByPartnerNameIgnoreCase(partnerName)
             .orElseGet(RoutePartners::new);
         partner.setPartnerName(partnerName);
         partner.setDescription(trimToNull(requestDto.getDescription()));
+        String previousImage = partner.getLogoImage();
         partner.setLogoImage(trimToNull(requestDto.getLogoImage()));
         partner.setHelperText(trimToNull(requestDto.getHelperText()));
         partner.setActive(Optional.ofNullable(requestDto.getActive()).orElse(true));
 
-        return toPartnerDto(routePartnerRepository.save(partner));
+        RoutePartners savedPartner = routePartnerRepository.save(partner);
+        if (file != null && !file.isEmpty()) {
+            String uploadedImage = commonUtils.uploadImage(
+                "admin",
+                savedPartner.getRoutePartnerId(),
+                savedPartner.getPartnerName(),
+                file,
+                "tana-route-partner-images"
+            );
+            savedPartner.setLogoImage(uploadedImage);
+            savedPartner = routePartnerRepository.save(savedPartner);
+            if (previousImage != null && !previousImage.equals(uploadedImage)) {
+                commonUtils.deleteImage(previousImage);
+            }
+        }
+        return toPartnerDto(savedPartner);
     }
 
     @Override
@@ -188,6 +212,30 @@ public class RouteAdminServiceImpl implements RouteAdminService {
 
     @Override
     public RouteItineraryResponseDto createRouteItinerary(RouteItineraryRequestDto requestDto) throws TanaException {
+        return saveRouteItinerary(new RouteItinerary(), requestDto);
+    }
+
+    @Override
+    public RouteItineraryResponseDto updateRouteItinerary(
+        Long itineraryId,
+        RouteItineraryRequestDto requestDto
+    ) throws TanaException {
+        RouteItinerary itinerary = routeItineraryRepository.findById(itineraryId)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        return saveRouteItinerary(itinerary, requestDto);
+    }
+
+    @Override
+    public void deleteRouteItinerary(Long itineraryId) throws TanaException {
+        RouteItinerary itinerary = routeItineraryRepository.findById(itineraryId)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        routeItineraryRepository.delete(itinerary);
+    }
+
+    private RouteItineraryResponseDto saveRouteItinerary(
+        RouteItinerary itinerary,
+        RouteItineraryRequestDto requestDto
+    ) throws TanaException {
         RouteMaster route = routeRepository.findById(
             Optional.ofNullable(requestDto.getRouteId()).orElse(0L)
         ).orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
@@ -195,7 +243,6 @@ public class RouteAdminServiceImpl implements RouteAdminService {
             Optional.ofNullable(requestDto.getPlaceId()).orElse(0L)
         ).orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
 
-        RouteItinerary itinerary = new RouteItinerary();
         itinerary.setRoute(route);
         itinerary.setPlace(place);
         itinerary.setDayNumber(requirePositive(requestDto.getDayNumber()));

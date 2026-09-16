@@ -120,6 +120,11 @@ public class PlacesServiceImpl implements PlacesService {
     @Transactional(rollbackOn = Exception.class)
     @Override
     public void createPlaces(PlacesRequestDto requestDto) throws TanaException {
+        createPlaces(requestDto, null);
+    }
+
+    @Override
+    public void createPlaces(PlacesRequestDto requestDto, MultipartFile file) throws TanaException {
         PlaceMaster placeMaster = new PlaceMaster();
         placeMaster.setName(requestDto.getName());
         placeMaster.setTown(requestDto.getTown());
@@ -151,6 +156,18 @@ public class PlacesServiceImpl implements PlacesService {
         placeMaster.setFacebook(requestDto.getFacebook());
         placeMaster.setInstagram(requestDto.getInstagram());
         PlaceMaster place = repository.save(placeMaster);
+
+        if (file != null && !file.isEmpty()) {
+            String uploadedImage = commonUtils.uploadImage(
+                "admin",
+                place.getId(),
+                place.getName(),
+                file,
+                "tana-place-images"
+            );
+            place.setImageStrings(List.of(uploadedImage));
+            place = repository.save(place);
+        }
 
         if (!ObjectUtils.isEmpty(requestDto.getCollections())) {
             List<CollectionsMaster> collectionsMasters = collectionService.getAllCollections();
@@ -358,7 +375,8 @@ public class PlacesServiceImpl implements PlacesService {
                 r.getAccount().getFirstName() + " " + lastNameInitial,
                 r.getCreatedAt(),
                 r.getContent(),
-                r.getAccount().getId().equals(authConfig.getCurrentUserId())
+                r.getAccount().getId().equals(authConfig.getCurrentUserId()),
+                r.getImage()
             );
         });
     }

@@ -48,6 +48,9 @@ public class CollectionsMaster extends Auditable {
     @Column(name = "collectionImage")
     private String collectionImage;
 
+    @Column(name = "badgeImage", length = 512)
+    private String badgeImage;
+
     @Column(name = "moodType")
     private Integer moodType;
 

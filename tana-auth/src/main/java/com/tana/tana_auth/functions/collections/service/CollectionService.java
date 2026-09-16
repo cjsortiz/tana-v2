@@ -23,6 +23,11 @@ public interface CollectionService {
     List<CollectionsMaster> getAllCollections();
     List<CollectionAdminOptionDto> getAdminCollectionOptions();
     CollectionAdminOptionDto createCollection(CollectionCreateRequestDto requestDto) throws TanaException;
+    CollectionAdminOptionDto createCollection(
+        CollectionCreateRequestDto requestDto,
+        MultipartFile collectionImage,
+        MultipartFile badgeImage
+    ) throws TanaException;
     List<CuratorSpotResponseDto> getAdminCuratorSpots();
     CuratorSpotResponseDto saveCuratorSpot(CuratorSpotRequestDto requestDto) throws TanaException;
     List<TanaStoryResponseDto> getAdminTanaStories();

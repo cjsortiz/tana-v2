@@ -84,6 +84,19 @@ public class RouteAdminController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/admin/partners", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TanaApiResponse createRoutePartnerWithLogo(
+        @RequestPart("partner") String partnerJson,
+        @RequestPart("file") MultipartFile file
+    ) throws TanaException, JsonProcessingException {
+        RoutePartnerRequestDto requestDto = objectMapper.readValue(partnerJson, RoutePartnerRequestDto.class);
+        return TanaApiResponse.builder()
+            .isSuccess(true)
+            .resultData(routeAdminService.createRoutePartner(requestDto, file))
+            .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/admin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public TanaApiResponse createRouteWithImage(
         @RequestPart("route") String routeJson,
@@ -114,5 +127,24 @@ public class RouteAdminController {
             .isSuccess(true)
             .resultData(routeAdminService.createRouteItinerary(requestDto))
             .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/admin/itinerary/{itineraryId}")
+    public TanaApiResponse updateRouteItinerary(
+        @PathVariable Long itineraryId,
+        @RequestBody RouteItineraryRequestDto requestDto
+    ) throws TanaException {
+        return TanaApiResponse.builder()
+            .isSuccess(true)
+            .resultData(routeAdminService.updateRouteItinerary(itineraryId, requestDto))
+            .build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping(value = "/admin/itinerary/{itineraryId}")
+    public TanaApiResponse deleteRouteItinerary(@PathVariable Long itineraryId) throws TanaException {
+        routeAdminService.deleteRouteItinerary(itineraryId);
+        return TanaApiResponse.builder().isSuccess(true).build();
     }
 }

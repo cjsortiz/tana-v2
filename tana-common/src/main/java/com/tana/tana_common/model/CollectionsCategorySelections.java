@@ -33,4 +33,8 @@ public class CollectionsCategorySelections extends Auditable {
     @JoinColumn(name = "placeId", nullable = false)
     private PlaceMaster place;
 
+    @Column(name = "displayOrder", nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer displayOrder = 1;
+
 }

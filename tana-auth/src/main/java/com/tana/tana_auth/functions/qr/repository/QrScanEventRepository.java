@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface QrScanEventRepository extends JpaRepository<QrScanEvent, Long> {
+    Optional<QrScanEvent> findByScanToken(String scanToken);
+
     long countByQrType(QrType qrType);
 
     @Query("select count(distinct event.scannerHash) from QrScanEvent event")

@@ -24,9 +24,12 @@ public interface CollectionsCategorySelectionRepository extends JpaRepository<Co
         ON sv.place.id = p.id
         AND sv.account.id = :accountId
     WHERE cs.collection.collectionId = :collectionId
+    ORDER BY cs.displayOrder ASC, cs.collectionSelectionId ASC
     """)
     List<CollectionsCategoryCustomQueryResponseDto> findWithPlaceByCollectionId(
             @Param("accountId") Long accountId,
             @Param("collectionId") Long collectionId
     );
+
+    void deleteAllByCollectionCollectionId(Long collectionId);
 }

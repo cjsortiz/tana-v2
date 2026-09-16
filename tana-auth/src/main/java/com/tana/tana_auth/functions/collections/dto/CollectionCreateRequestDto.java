@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,7 +17,9 @@ public class CollectionCreateRequestDto {
     private String badgeOverview;
     private String helperText;
     private String collectionImage;
+    private String badgeImage;
     private String segment;
     private Integer moodType;
     private Integer moodPriority;
+    private List<CollectionSpotRequestDto> spots;
 }

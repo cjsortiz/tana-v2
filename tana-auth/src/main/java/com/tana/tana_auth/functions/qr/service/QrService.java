@@ -10,5 +10,6 @@ public interface QrService {
         String appUrl,
         HttpServletRequest request
     );
+    void claimScan(String scanToken);
     QrAnalyticsDto getAnalytics();
 }

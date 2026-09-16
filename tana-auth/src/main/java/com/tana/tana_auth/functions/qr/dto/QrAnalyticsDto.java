@@ -14,6 +14,8 @@ public class QrAnalyticsDto {
     private long collectionUniqueScanners;
     private long spotScans;
     private long spotUniqueScanners;
+    private long routeScans;
+    private long routeUniqueScanners;
     private long downloadScans;
     private long downloadUniqueScanners;
     private List<QrTargetAnalyticsDto> targets;

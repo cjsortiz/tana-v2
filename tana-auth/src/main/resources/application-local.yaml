@@ -121,7 +121,7 @@ encryption:
   salt: ${SALT_KEY}
 
 allowed:
-  origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://172.20.10.4:808,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
+  origin: http://localhost:8081,http://192.168.1.10:8081,http://192.168.100.27:8081,http://172.20.10.4:8081,http://172.20.10.4:808,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
 
   flyway:
     enabled: true

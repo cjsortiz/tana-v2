@@ -39,6 +39,12 @@ public class QrController {
             .body(qrService.recordScanAndBuildHandoff(type, targetId, appUrl, request));
     }
 
+    @PostMapping("/scans/{scanToken}/claim")
+    public TanaApiResponse claimScan(@PathVariable String scanToken) {
+        qrService.claimScan(scanToken);
+        return TanaApiResponse.builder().isSuccess(true).build();
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/analytics")
     public TanaApiResponse getAnalytics() {

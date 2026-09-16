@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
     name = "QrScanEvent",
     indexes = {
         @Index(name = "idx_qr_scan_type_target", columnList = "qrType,targetId"),
-        @Index(name = "idx_qr_scan_scanned_at", columnList = "scannedAt")
+        @Index(name = "idx_qr_scan_scanned_at", columnList = "scannedAt"),
+        @Index(name = "idx_qr_scan_account", columnList = "accountId")
     }
 )
 @Getter
@@ -34,6 +35,12 @@ public class QrScanEvent {
     @Column(name = "scannerHash", nullable = false, length = 64)
     private String scannerHash;
 
+    @Column(name = "scanToken", unique = true, length = 36)
+    private String scanToken;
+
+    @Column(name = "accountId")
+    private Long accountId;
+
     @Column(name = "platform", length = 24)
     private String platform;
 
@@ -42,4 +49,7 @@ public class QrScanEvent {
 
     @Column(name = "scannedAt", nullable = false)
     private LocalDateTime scannedAt;
+
+    @Column(name = "claimedAt")
+    private LocalDateTime claimedAt;
 }

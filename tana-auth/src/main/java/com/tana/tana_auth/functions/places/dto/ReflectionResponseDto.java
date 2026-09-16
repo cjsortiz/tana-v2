@@ -16,4 +16,5 @@ public class ReflectionResponseDto {
     private LocalDateTime date;
     private String content;
     private boolean isMine;
+    private String image;
 }

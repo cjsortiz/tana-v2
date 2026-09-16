@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @Data
-public class CollectionAdminOptionDto {
-    private Long collectionId;
-    private String collectionName;
-    private String segment;
-    private String collectionImage;
-    private String badgeImage;
+public class CollectionSpotRequestDto {
+    private Long placeId;
+    private Integer displayOrder;
 }

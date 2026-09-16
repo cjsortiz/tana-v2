@@ -3,9 +3,8 @@ package com.tana.tana_auth.functions.places.service;
 import com.tana.tana_auth.functions.places.dto.ReflectionRequestDto;
 import com.tana.tana_auth.functions.places.dto.*;
 import com.tana.tana_common.constant.exception.TanaException;
-import org.apache.commons.math3.analysis.function.Tan;
-import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,6 +13,7 @@ import java.util.Map;
 public interface PlacesService {
 
     void createPlaces(PlacesRequestDto placesRequestDto) throws TanaException;
+    void createPlaces(PlacesRequestDto placesRequestDto, MultipartFile file) throws TanaException;
 
     PlacesDashboardResponseDto fetchDashboardImages(DashboardRequestDto requestDto);
 
