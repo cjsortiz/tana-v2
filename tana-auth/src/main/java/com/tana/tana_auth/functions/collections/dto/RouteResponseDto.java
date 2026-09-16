@@ -20,6 +20,7 @@ public class RouteResponseDto {
     private String mix;
     private String badge;
     private String icon;
+    private String routeImage;
     private String blurb;
     private String description;
     private Boolean airportPartner;

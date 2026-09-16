@@ -10,7 +10,8 @@ import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -37,6 +38,9 @@ public class CommonUtils {
 
     @Autowired
     private S3Client s3Client;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     @Value("${S3_BUCKET_NAME}")
     private String bucketName;
@@ -266,27 +270,29 @@ public class CommonUtils {
     }
 
 
-    @Cacheable(value = "spot-images", key = "#spotName")
     public List<String> getSpotImages(String spotName) {
+        if (spotName == null || spotName.isBlank()) return Collections.emptyList();
+        Cache cache = cacheManager.getCache("spot-images");
+        // Explicit cache access also covers calls from the batch method in this class.
+        return cache == null ? loadSpotImages(spotName)
+            : cache.get(spotName, () -> loadSpotImages(spotName));
+    }
+
+    private List<String> loadSpotImages(String spotName) {
         String sanitizedName = spotName.replaceAll("[^a-zA-Z0-9-_]", "");
         String prefix = "tana-place-images/" + sanitizedName + "/";
 
         try {
-            ListObjectsV2Request request = ListObjectsV2Request.builder()
-                    .bucket(bucketName)
-                    .prefix(prefix)
-                    .build();
-
-            ListObjectsV2Response response = s3Client.listObjectsV2(request);
-
-            if (response.contents() == null || response.contents().isEmpty()) {
-                return Collections.emptyList();
-            }
-
-            return response.contents().stream()
-                    .map(S3Object::key)
-                    .filter(key -> !key.endsWith("/"))
-                    .collect(Collectors.toList());
+            List<String> images = new ArrayList<>();
+            String token = null;
+            do {
+                ListObjectsV2Response response = s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                    .bucket(bucketName).prefix(prefix).continuationToken(token).build());
+                response.contents().stream().map(S3Object::key)
+                    .filter(key -> !key.endsWith("/")).forEach(images::add);
+                token = Boolean.TRUE.equals(response.isTruncated()) ? response.nextContinuationToken() : null;
+            } while (token != null);
+            return List.copyOf(images);
 
         } catch (Exception e) {
             log.error("Failed to fetch spot images from S3", e);
@@ -299,65 +305,7 @@ public class CommonUtils {
             return Collections.emptyMap();
         }
 
-        Map<String, String> spotNamesBySanitizedName = spotNames.stream()
-            .filter(Objects::nonNull)
-            .distinct()
-            .collect(Collectors.toMap(
-                spotName -> spotName.replaceAll("[^a-zA-Z0-9-_]", ""),
-                spotName -> spotName,
-                (existing, ignored) -> existing
-            ));
-
-        if (spotNamesBySanitizedName.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        Map<String, List<String>> imagesBySpotName = spotNamesBySanitizedName.values().stream()
-            .collect(Collectors.toMap(
-                spotName -> spotName,
-                spotName -> new ArrayList<>()
-            ));
-
-        try {
-            String continuationToken = null;
-
-            do {
-                ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
-                    .bucket(bucketName)
-                    .prefix("tana-place-images/");
-
-                if (continuationToken != null) {
-                    requestBuilder.continuationToken(continuationToken);
-                }
-
-                ListObjectsV2Request request = requestBuilder.build();
-
-                ListObjectsV2Response response = s3Client.listObjectsV2(request);
-
-                if (response.contents() != null && !response.contents().isEmpty()) {
-                    response.contents().stream()
-                        .map(S3Object::key)
-                        .filter(key -> !key.endsWith("/"))
-                        .forEach(key -> {
-                            String[] parts = key.split("/");
-                            if (parts.length < 3) {
-                                return;
-                            }
-
-                            String spotName = spotNamesBySanitizedName.get(parts[1]);
-                            if (spotName != null) {
-                                imagesBySpotName.get(spotName).add(key);
-                            }
-                        });
-                }
-
-                continuationToken = response.nextContinuationToken();
-            } while (continuationToken != null);
-
-            return imagesBySpotName;
-        } catch (Exception e) {
-            log.error("Failed to batch fetch spot images from S3", e);
-            return imagesBySpotName;
-        }
+        return spotNames.stream().filter(Objects::nonNull).filter(name -> !name.isBlank())
+            .distinct().collect(Collectors.toMap(name -> name, this::getSpotImages));
     }
 }

@@ -32,7 +32,7 @@ public class EventsServiceImpl implements EventsService {
     private CommonUtils commonUtils;
 
     @Override
-    @Cacheable(value = "events-list", key = "#months")
+    @Cacheable(value = "events-list", key = "#months", sync = true)
     public List<EventResponseDto> getEvents(String months) {
         Set<String> monthFilters = parseMonths(months);
 

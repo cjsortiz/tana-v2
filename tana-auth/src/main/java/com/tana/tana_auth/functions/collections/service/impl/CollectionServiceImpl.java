@@ -79,9 +79,7 @@ public class CollectionServiceImpl implements CollectionService {
     private CommonUtils commonUtils;
 
     @Override
-    @Cacheable("collections")
     public List<CollectionsMaster> getAllCollections() {
-        System.out.println("Fetching from DB...");
         return collectionRepository.findAll();
     }
 
@@ -286,7 +284,7 @@ public class CollectionServiceImpl implements CollectionService {
 
     @Override
     @Cacheable(
-        value = "collections-list-response",
+        value = "collections-list-response", sync = true,
         key = "T(java.lang.String).valueOf(@authConfig.getCurrentUserId())"
     )
     public CollectionsListResponseDto getCollectionsList() {
@@ -343,7 +341,7 @@ public class CollectionServiceImpl implements CollectionService {
 
     @Override
     @Cacheable(
-        value = "home-v2-response",
+        value = "home-v2-response", sync = true,
         key = "T(java.lang.String).valueOf(@authConfig.getCurrentUserId())"
     )
     public HomeV2ResponseDto getHomeV2() {
@@ -402,6 +400,7 @@ public class CollectionServiceImpl implements CollectionService {
         return RouteResponseDto.builder()
             .routeId(String.valueOf(route.getRouteId()))
             .name(route.getRouteName())
+            .routeImage(route.getRouteImage())
             .duration(route.getRouteDuration())
             .pace(route.getRouteDuration())
             .base(route.getRouteCategory() == null ? "" : route.getRouteCategory().getCategoryName())
@@ -590,7 +589,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Cacheable(
-        value = "collectionDetails",
+        value = "collectionDetails", sync = true,
         key = "#requestDto.collectionId + '_' + T(java.lang.String).valueOf(@authConfig.getCurrentUserId())"
     )
     @Override

@@ -59,7 +59,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Cacheable(
-        value = "user-details",
+        value = "user-details", sync = true,
         key = "T(java.lang.String).valueOf(@authConfig.getCurrentUserId())"
     )
     public AccountResponseDto getUserProfileDetails() throws TanaException {

@@ -28,6 +28,11 @@
         <java.version>17</java.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- TANA COMMON DEPENDENCY INJECTION -->
         <dependency>
             <groupId>com.tana</groupId>

@@ -23,7 +23,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.BufferedReader;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
+import com.github.benmanes.caffeine.cache.Ticker;
 
 @Component
 public class Interceptor implements HandlerInterceptor {
@@ -36,31 +37,22 @@ public class Interceptor implements HandlerInterceptor {
     @Autowired
     private CommonUtils commonUtils;
 
-    private final Map<String, Queue<Long>> requestTimestamps = new ConcurrentHashMap<>();
-    private final int MAX_REQUESTS_PER_MINUTE = 100;
+    private final SlidingWindowRateLimiter rateLimiter = new SlidingWindowRateLimiter(
+        100, Duration.ofMinutes(1), 10_000, Ticker.systemTicker());
+    private final ObjectMapper objectMapper = new ObjectMapper()
+        .registerModule(new JavaTimeModule())
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) throws Exception {
         String client = request.getRemoteAddr();
-        long now = System.currentTimeMillis();
-
-        Queue<Long> timestamps = requestTimestamps.computeIfAbsent(
-            client,
-            key -> new java.util.concurrent.ConcurrentLinkedQueue<>()
-        );
-
-        // Remove requests older than 1 minute
-        timestamps.removeIf(time -> time == null || time + 60_000 < now);
-
-        if (timestamps.size() >= MAX_REQUESTS_PER_MINUTE) {
+        if (!rateLimiter.tryAcquire(client)) {
             response.setStatus(CustomCodeErrors.TOO_MANY_REQUESTS.getCode());
             response.getWriter().write(CustomCodeErrors.TOO_MANY_REQUESTS.getMessage());
             return false;
         }
-
-        timestamps.add(now);
 
         final String authHeader = request.getHeader("Authorization");
         String tokenString = CommonConstants.EMPTY_STRING;
@@ -114,9 +106,6 @@ public class Interceptor implements HandlerInterceptor {
         }
 
         String body = requestBody.toString().trim();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         for (MethodParameter methodParameter : requestAttributeParameters) {
             Class<?> paramType = methodParameter.getParameterType();
@@ -145,7 +134,6 @@ public class Interceptor implements HandlerInterceptor {
                            HttpServletResponse response,
                            Object handler,
                            org.springframework.web.servlet.ModelAndView modelAndView) throws Exception {
-        System.out.println("After handling the request");
     }
 
     @Override
@@ -153,7 +141,6 @@ public class Interceptor implements HandlerInterceptor {
                                 HttpServletResponse response,
                                 Object handler,
                                 Exception ex) throws Exception {
-        System.out.println("After request completion");
     }
 
     @SuppressWarnings("unchecked")

@@ -202,7 +202,7 @@ public class PlacesServiceImpl implements PlacesService {
 
     @Override
     @Cacheable(
-        value = "place-list",
+        value = "place-list", sync = true,
         key = "T(String).format('%s-%s-%s-%s-%s-%s-%s-%s-%s', " +
             "@authConfig.getCurrentUserId(), " +
             "#requestDto == null ? 'null' : #requestDto.placeId, " +
@@ -242,9 +242,10 @@ public class PlacesServiceImpl implements PlacesService {
             return PlacesListResponseDto.builder().build();
         }
 
+        Map<Long, List<CollectionsCategoryCustomQueryResponseDto>> collectionSelections = new HashMap<>();
         List<PlacesDetailsResponseDto> placesDetailsResponseDtoList =
             placeMasters.stream()
-                .map(this::buildPlaceDetailsResponseDto
+                .map(place -> buildPlaceDetailsResponseDto(place, collectionSelections)
                 ).toList();
 
         if (Boolean.TRUE.equals(requestDto.getNearbyOnly())) {
@@ -586,7 +587,7 @@ public class PlacesServiceImpl implements PlacesService {
     }
 
     @Cacheable(
-        value = "saved-list",
+        value = "saved-list", sync = true,
         key = "@authConfig.getCurrentUserId()"
     )
     @Override
@@ -613,6 +614,11 @@ public class PlacesServiceImpl implements PlacesService {
 
 
     private PlacesDetailsResponseDto buildPlaceDetailsResponseDto(PlaceMaster placeMaster) {
+        return buildPlaceDetailsResponseDto(placeMaster, new HashMap<>());
+    }
+
+    private PlacesDetailsResponseDto buildPlaceDetailsResponseDto(PlaceMaster placeMaster,
+        Map<Long, List<CollectionsCategoryCustomQueryResponseDto>> collectionSelections) {
         final String[] locationList = Optional.ofNullable(placeMaster.getGpsLocation())
             .filter(s -> s.contains(","))
             .map(s -> s.split(","))
@@ -644,8 +650,9 @@ public class PlacesServiceImpl implements PlacesService {
         final List<CollectionsCategoryCustomQueryResponseDto> collectionsCategorySelectionsList =
             cm == null
                 ? List.of()
-                : collectionsCategorySelectionRepository.findWithPlaceByCollectionId(
-                    authConfig.getCurrentUserId(), cm.getCollectionId());
+                : collectionSelections.computeIfAbsent(cm.getCollectionId(), collectionId ->
+                    collectionsCategorySelectionRepository.findWithPlaceByCollectionId(
+                        authConfig.getCurrentUserId(), collectionId));
 
         final int index = IntStream.range(0, collectionsCategorySelectionsList.size())
             .filter(i -> collectionsCategorySelectionsList.get(i)
