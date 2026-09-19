@@ -15,6 +15,14 @@ public interface QrScanEventRepository extends JpaRepository<QrScanEvent, Long> 
 
     long countByQrType(QrType qrType);
 
+    @Query("""
+        select event.downloadPlatform as downloadPlatform, event.partnerId as partnerId, event.qrType as qrType,
+               event.targetId as targetId, count(event.scanId) as scanCount
+        from QrScanEvent event
+        group by event.downloadPlatform, event.partnerId, event.qrType, event.targetId
+        """)
+    List<QrSourceScanProjection> findSourceAnalytics();
+
     @Query("select count(distinct event.scannerHash) from QrScanEvent event")
     long countUniqueScanners();
 

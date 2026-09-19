@@ -108,7 +108,8 @@ app:
     service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
 
 qr:
-  ios-app-store-url: ${IOS_APP_STORE_URL:https://apps.apple.com/ph/search?term=tana}
+  android-download-available: ${ANDROID_DOWNLOAD_AVAILABLE:false}
+  ios-app-store-url: ${IOS_APP_STORE_URL:https://apps.apple.com/ph/app/tana/id6769938553}
   android-play-store-url: ${ANDROID_PLAY_STORE_URL:https://play.google.com/store/apps/details?id=com.app.tana}
   analytics-hash-salt: ${QR_ANALYTICS_HASH_SALT:tana-qr-analytics}
 
@@ -125,7 +126,7 @@ encryption:
   salt: ${SALT_KEY}
 
 allowed:
-  origin: http://localhost:8081,http://192.168.1.10:8081,http://172.20.10.4:8081,http://192.168.100.40:8080,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
+  origin: http://localhost:8081,http://192.168.100.38:8081,http://172.20.10.4:8081,http://192.168.100.40:8080,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
 
   flyway:
     enabled: true

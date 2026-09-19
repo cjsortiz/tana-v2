@@ -32,6 +32,12 @@ public class QrScanEvent {
     @Column(name = "targetId")
     private Long targetId;
 
+    @Column(name = "partnerId")
+    private Long partnerId;
+
+    @Column(name = "downloadPlatform", length = 16)
+    private String downloadPlatform;
+
     @Column(name = "scannerHash", nullable = false, length = 64)
     private String scannerHash;
 

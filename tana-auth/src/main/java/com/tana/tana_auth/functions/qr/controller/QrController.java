@@ -4,6 +4,9 @@ import com.tana.tana_auth.functions.qr.service.QrService;
 import com.tana.tana_common.constant.dto.TanaApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
+import org.springframework.http.CacheControl;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +26,15 @@ public class QrController {
         HttpServletRequest request
     ) {
         return ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
             .contentType(MediaType.TEXT_HTML)
             .body(qrService.recordScanAndBuildHandoff("download", null, appUrl, request));
+    }
+
+    @GetMapping(value = "/open/download/logo", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<Resource> downloadLogo() {
+        return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG)
+            .body(new ClassPathResource("templates/qr-download-logo.png"));
     }
 
     @GetMapping(value = "/open/{type}/{targetId}", produces = MediaType.TEXT_HTML_VALUE)

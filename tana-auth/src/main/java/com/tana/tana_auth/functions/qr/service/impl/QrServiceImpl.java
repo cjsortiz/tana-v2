@@ -4,6 +4,8 @@ import com.tana.tana_auth.config.AuthConfig;
 import com.tana.tana_auth.functions.collections.repository.CollectionRepository;
 import com.tana.tana_auth.functions.places.repository.PlacesRepository;
 import com.tana.tana_auth.functions.qr.dto.QrAnalyticsDto;
+import com.tana.tana_auth.functions.qr.dto.QrSourceAnalyticsDto;
+import com.tana.tana_auth.functions.routes.repository.RoutePartnerRepository;
 import com.tana.tana_auth.functions.qr.dto.QrTargetAnalyticsDto;
 import com.tana.tana_auth.functions.qr.model.QrScanEvent;
 import com.tana.tana_auth.functions.qr.model.QrType;
@@ -33,12 +35,16 @@ public class QrServiceImpl implements QrService {
     private final PlacesRepository placesRepository;
     private final RouteRepository routeRepository;
     private final AuthConfig authConfig;
+    private final RoutePartnerRepository routePartnerRepository;
 
-    @Value("${qr.ios-app-store-url:https://apps.apple.com/ph/search?term=tana}")
+    @Value("${qr.ios-app-store-url:https://apps.apple.com/ph/app/tana/id6769938553}")
     private String iosAppStoreUrl;
 
     @Value("${qr.android-play-store-url:https://play.google.com/store/apps/details?id=com.app.tana}")
     private String androidPlayStoreUrl;
+
+    @Value("${qr.android-download-available:false}")
+    private boolean androidDownloadAvailable;
 
     @Value("${qr.analytics-hash-salt:tana-qr-analytics}")
     private String analyticsHashSalt;
@@ -48,13 +54,15 @@ public class QrServiceImpl implements QrService {
         CollectionRepository collectionRepository,
         PlacesRepository placesRepository,
         RouteRepository routeRepository,
-        AuthConfig authConfig
+        AuthConfig authConfig,
+        RoutePartnerRepository routePartnerRepository
     ) {
         this.qrScanEventRepository = qrScanEventRepository;
         this.collectionRepository = collectionRepository;
         this.placesRepository = placesRepository;
         this.routeRepository = routeRepository;
         this.authConfig = authConfig;
+        this.routePartnerRepository = routePartnerRepository;
     }
 
     @Override
@@ -68,10 +76,20 @@ public class QrServiceImpl implements QrService {
         QrType qrType = parseType(type);
         validateTarget(qrType, targetId);
 
+        Long partnerId = resolvePartnerId(request.getParameter("partnerId"));
+        String downloadPlatform = qrType == QrType.DOWNLOAD
+            ? request.getParameter("platform") : null;
+        if (qrType == QrType.DOWNLOAD && downloadPlatform == null) downloadPlatform = "android";
+        if (downloadPlatform != null && !downloadPlatform.equals("android") && !downloadPlatform.equals("ios")) {
+            throw new ResponseStatusException(NOT_FOUND, "QR download platform not found");
+        }
+
         String userAgent = safeHeader(request.getHeader("User-Agent"));
         QrScanEvent event = new QrScanEvent();
         event.setQrType(qrType);
         event.setTargetId(targetId);
+        event.setPartnerId(partnerId);
+        event.setDownloadPlatform(downloadPlatform);
         event.setScannerHash(hashScanner(request, userAgent));
         event.setScanToken(UUID.randomUUID().toString());
         event.setPlatform(detectPlatform(userAgent));
@@ -79,7 +97,9 @@ public class QrServiceImpl implements QrService {
         event.setScannedAt(LocalDateTime.now());
         qrScanEventRepository.save(event);
 
-        return handoffPage(qrType, targetId, event.getScanToken(), appUrl);
+        return qrType == QrType.DOWNLOAD
+            ? ("ios".equals(downloadPlatform) ? iosDownloadPage() : downloadPage())
+            : handoffPage(qrType, targetId, event.getScanToken(), appUrl);
     }
 
     @Override
@@ -102,6 +122,15 @@ public class QrServiceImpl implements QrService {
     @Transactional(readOnly = true)
     public QrAnalyticsDto getAnalytics() {
         return QrAnalyticsDto.builder()
+            .sources(qrScanEventRepository.findSourceAnalytics().stream()
+                .map(row -> QrSourceAnalyticsDto.builder()
+                    .downloadPlatform(row.getDownloadPlatform())
+                    .partnerId(row.getPartnerId())
+                    .type(row.getQrType().name())
+                    .targetId(row.getTargetId())
+                    .scanCount(row.getScanCount())
+                    .build())
+                .toList())
             .totalScans(qrScanEventRepository.count())
             .uniqueScanners(qrScanEventRepository.countUniqueScanners())
             .collectionScans(qrScanEventRepository.countByQrType(QrType.COLLECTION))
@@ -121,6 +150,17 @@ public class QrServiceImpl implements QrService {
                     .build())
                 .toList())
             .build();
+    }
+
+    private Long resolvePartnerId(String value) {
+        if (value == null) return null;
+        try {
+            Long partnerId = Long.valueOf(value);
+            if (partnerId > 0 && routePartnerRepository.existsById(partnerId)) return partnerId;
+        } catch (NumberFormatException ignored) {
+            // Invalid partner links must not silently count as general scans.
+        }
+        throw new ResponseStatusException(NOT_FOUND, "QR partner not found");
     }
 
     private QrType parseType(String type) {
@@ -219,6 +259,60 @@ public class QrServiceImpl implements QrService {
                 escapeJs(iosAppStoreUrl),
                 expoGoTarget
             );
+    }
+
+    private String iosDownloadPage() {
+        String url = org.springframework.web.util.HtmlUtils.htmlEscape(iosAppStoreUrl);
+        return """
+            <!doctype html><html lang="en"><head><meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta http-equiv="refresh" content="0;url=%s">
+            <title>tana! on the App Store</title></head>
+            <body><h1>tana! for iOS</h1><p><a href="%s">Download on the App Store</a></p></body></html>
+            """.formatted(url, url);
+    }
+
+    private String downloadPage() {
+        String storeUrl = androidPlayStoreUrl == null ? "" : androidPlayStoreUrl.trim();
+        boolean available = androidDownloadAvailable
+            && storeUrl.startsWith("https://play.google.com/store/apps/details?id=");
+        String escapedUrl = org.springframework.web.util.HtmlUtils.htmlEscape(storeUrl);
+        String redirect = available
+            ? "<meta http-equiv=\"refresh\" content=\"0;url=" + escapedUrl + "\">"
+            : "";
+        String action = available
+            ? "<a href=\"" + escapedUrl + "\">Get it on Google Play</a>"
+            : "<p class=\"note\">A little more time. A lot more to discover.</p>";
+        return """
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <meta name="robots" content="noindex">
+              <meta name="theme-color" content="#0c4230">
+              %s
+              <title>tana! for Android</title>
+              <style>
+                *{box-sizing:border-box}body{margin:0;background:#fff;color:#123d30;font-family:system-ui,-apple-system,sans-serif;letter-spacing:0}
+                main{min-height:90svh;max-width:640px;margin:auto;padding:64px 24px 40px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+                img{width:112px;height:112px;object-fit:contain}h1{font-size:48px;line-height:1.1;margin:24px 0 12px}h2{font-size:26px;line-height:1.25;margin:0 0 20px}
+                p{font-size:17px;line-height:1.6;max-width:400px;margin:0;color:#53625c}.platform{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0;color:#54712a;margin:20px 0 12px}
+                .note{font-size:14px;margin-top:32px;color:#6c706d}a{display:inline-block;max-width:100%%;margin-top:28px;padding:15px 22px;border-radius:8px;background:#0c4230;color:#fff;text-decoration:none;font-weight:700}a:focus-visible{outline:3px solid #b6ca67;outline-offset:4px}
+                footer{min-height:10svh;border-top:1px solid #e5e9e5;padding:24px;text-align:center;font-size:13px;color:#53625c}
+              </style>
+            </head>
+            <body><main>
+              <img src="./download/logo" alt="" width="112" height="112">
+              <h1>tana!</h1><p class="platform">For Android</p>
+              <h2>%s</h2><p>%s</p>%s
+            </main><footer>Made for discovering Bohol.</footer></body>
+            </html>
+            """.formatted(redirect,
+                available ? "Your next adventure is ready." : "Coming soon.",
+                available ? "Download tana! on Google Play and start exploring Bohol."
+                    : "Discover local spots, follow new routes, and find your next adventure in Bohol. tana! is coming to Google Play.",
+                action);
     }
 
     private String appendQuery(String url, String name, String value) {

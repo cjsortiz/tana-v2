@@ -19,4 +19,5 @@ public class QrAnalyticsDto {
     private long downloadScans;
     private long downloadUniqueScanners;
     private List<QrTargetAnalyticsDto> targets;
+    private List<QrSourceAnalyticsDto> sources;
 }
