@@ -32,4 +32,6 @@ public interface CollectionsCategorySelectionRepository extends JpaRepository<Co
     );
 
     void deleteAllByCollectionCollectionId(Long collectionId);
+    List<CollectionsCategorySelections> findAllByPlaceId(Long placeId);
+    List<CollectionsCategorySelections> findAllByCollectionCollectionIdOrderByDisplayOrderAscCollectionSelectionIdAsc(Long collectionId);
 }

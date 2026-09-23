@@ -12,6 +12,8 @@ import java.util.Map;
 
 public interface PlacesService {
 
+    PlacesRequestDto getAdminPlace(Long placeId) throws TanaException;
+
     void createPlaces(PlacesRequestDto placesRequestDto) throws TanaException;
     void createPlaces(PlacesRequestDto placesRequestDto, MultipartFile file) throws TanaException;
 

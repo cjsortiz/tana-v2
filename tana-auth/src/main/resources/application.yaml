@@ -1,4 +1,8 @@
 spring:
+  flyway:
+    # DatabaseMigrationConfig runs migrations after the existing Hibernate/SQL initialization.
+    # Boot's automatic initializer would conflict with defer-datasource-initialization.
+    enabled: false
   config:
     import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
   application:
@@ -126,12 +130,8 @@ encryption:
   salt: ${SALT_KEY}
 
 allowed:
-  origin: http://localhost:8081,http://192.168.100.38:8081,http://172.20.10.4:8081,http://192.168.100.40:8080,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
+  origin: http://localhost:8081,http://192.168.100.64:8081,http://172.20.10.4:8081,http://192.168.100.40:8080,http://13.214.43.13:8081,https://flagstick-outsell-poppy.ngrok-free.dev,https://tana-live.netlify.app
 
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:templates
 
 
 file:

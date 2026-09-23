@@ -8,4 +8,7 @@ import java.util.List;
 public interface RouteCompletionService {
     List<CompletedRouteResponseDto> getCompletedRoutes();
     CompletedRouteResponseDto completeRoute(Long routeId) throws TanaException;
+    List<CompletedRouteResponseDto> getRouteProgress();
+    CompletedRouteResponseDto restartRoute(Long routeId) throws TanaException;
+    CompletedRouteResponseDto updateRetakeStop(Long routeId, Long placeId, boolean visited) throws TanaException;
 }

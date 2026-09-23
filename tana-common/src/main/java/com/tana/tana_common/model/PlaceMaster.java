@@ -58,7 +58,7 @@ public class PlaceMaster extends Auditable {
     @Column(name = "town", length = 64)
     private String town;
 
-    @Column(name = "googleAddress", length = 64)
+    @Column(name = "googleAddress", columnDefinition = "TEXT")
     private String googleAddress;
 
     @Column(name = "facebook")
@@ -82,7 +82,7 @@ public class PlaceMaster extends Auditable {
     @Column(name = "overview",columnDefinition = "TEXT")
     private String overview;
 
-    @Column(name = "tanaTip")
+    @Column(name = "tanaTip", columnDefinition = "TEXT")
     private String tanaTip;
 
     @Column(name = "imageStrings", columnDefinition = "JSON")

@@ -10,4 +10,7 @@ import java.time.LocalDateTime;
 public class CompletedRouteResponseDto {
     private Long routeId;
     private LocalDateTime completedAt;
+    private LocalDateTime restartedAt;
+    private boolean retaking;
+    private java.util.List<String> visitedPlaceIds;
 }

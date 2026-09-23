@@ -39,6 +39,13 @@ public class PlacesController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/{id}")
+    public TanaApiResponse getAdminPlace(@PathVariable Long id) throws TanaException {
+        return TanaApiResponse.builder().isSuccess(true)
+            .resultData(placesService.getAdminPlace(id)).build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public TanaApiResponse createPlacesWithImage(
         @RequestPart("place") String placeJson,

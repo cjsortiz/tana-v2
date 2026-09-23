@@ -94,14 +94,24 @@ public class CollectionServiceImpl implements CollectionService {
     @Override
     @Caching(evict = {
         @CacheEvict(value = "collections", allEntries = true),
+        @CacheEvict(value = "collectionDetails", allEntries = true),
+        @CacheEvict(value = "place-list", allEntries = true),
         @CacheEvict(value = "collections-list-response", allEntries = true),
         @CacheEvict(value = "home-v2-response", allEntries = true)
     })
+    @Transactional(rollbackFor = Exception.class)
     public CollectionAdminOptionDto createCollection(CollectionCreateRequestDto requestDto) throws TanaException {
         return createCollection(requestDto, null, null);
     }
 
     @Override
+    @Caching(evict = {
+        @CacheEvict(value = "collections", allEntries = true),
+        @CacheEvict(value = "collectionDetails", allEntries = true),
+        @CacheEvict(value = "place-list", allEntries = true),
+        @CacheEvict(value = "collections-list-response", allEntries = true),
+        @CacheEvict(value = "home-v2-response", allEntries = true)
+    })
     @Transactional(rollbackFor = Exception.class)
     public CollectionAdminOptionDto createCollection(
         CollectionCreateRequestDto requestDto,
@@ -113,13 +123,16 @@ public class CollectionServiceImpl implements CollectionService {
         Spot spot = spotRepository.findBySpotNameIgnoreCase(segment)
             .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
 
-        CollectionsMaster collection = new CollectionsMaster();
+        CollectionsMaster collection = requestDto.getCollectionId() == null ? new CollectionsMaster()
+            : collectionRepository.findById(requestDto.getCollectionId())
+                .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
         collection.setCollectionName(collectionName);
         collection.setOverview(trimToNull(requestDto.getOverview()));
         collection.setBadge(trimToNull(requestDto.getBadge()));
         collection.setBadgeOverview(trimToNull(requestDto.getBadgeOverview()));
         collection.setHelperText(trimToNull(requestDto.getHelperText()));
         collection.setCollectionImage(trimToNull(requestDto.getCollectionImage()));
+        collection.setBadgeImage(trimToNull(requestDto.getBadgeImage()));
         collection.setMoodType(requestDto.getMoodType());
         collection.setMoodPriority(requestDto.getMoodPriority());
         collection.setSpot(spot);
@@ -146,6 +159,10 @@ public class CollectionServiceImpl implements CollectionService {
         }
         savedCollection = collectionRepository.save(savedCollection);
 
+        if (requestDto.getCollectionId() != null) {
+            categorySelectionRepository.deleteAllByCollectionCollectionId(savedCollection.getCollectionId());
+            categorySelectionRepository.flush();
+        }
         List<CollectionSpotRequestDto> requestedSpots = Optional.ofNullable(requestDto.getSpots())
             .orElse(List.of());
         Set<Long> seenPlaceIds = new HashSet<>();
@@ -263,6 +280,13 @@ public class CollectionServiceImpl implements CollectionService {
             .segment(collection.getSpot() == null ? null : collection.getSpot().getSpotName())
             .collectionImage(collection.getCollectionImage())
             .badgeImage(collection.getBadgeImage())
+            .overview(collection.getOverview()).badge(collection.getBadge())
+            .badgeOverview(collection.getBadgeOverview()).helperText(collection.getHelperText())
+            .moodType(collection.getMoodType()).moodPriority(collection.getMoodPriority())
+            .spots(categorySelectionRepository
+                .findAllByCollectionCollectionIdOrderByDisplayOrderAscCollectionSelectionIdAsc(collection.getCollectionId())
+                .stream().map(selection -> CollectionSpotRequestDto.builder()
+                    .placeId(selection.getPlace().getId()).displayOrder(selection.getDisplayOrder()).build()).toList())
             .build();
     }
 

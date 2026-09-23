@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import com.tana.tana_common.util.converter.JsonListConverter;
 
 @Getter
 @Setter
@@ -33,4 +35,15 @@ public class UserCompletedRoute extends Auditable {
 
     @Column(name = "completedAt", nullable = false)
     private LocalDateTime completedAt;
+
+    @Column(name = "restartedAt")
+    private LocalDateTime restartedAt;
+
+    @Column(name = "retakeVisitedPlaceIds", columnDefinition = "JSON")
+    @Convert(converter = JsonListConverter.class)
+    private List<String> retakeVisitedPlaceIds;
+
+    @Version
+    @Column(name = "revision", nullable = false)
+    private long revision;
 }

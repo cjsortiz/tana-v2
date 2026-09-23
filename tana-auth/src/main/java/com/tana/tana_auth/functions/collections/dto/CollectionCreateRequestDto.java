@@ -11,6 +11,7 @@ import java.util.List;
 @Builder
 @Data
 public class CollectionCreateRequestDto {
+    private Long collectionId;
     private String collectionName;
     private String overview;
     private String badge;

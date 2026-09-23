@@ -14,6 +14,8 @@ import java.util.List;
 @Data
 public class PlacesRequestDto {
 
+    private Long placeId;
+
     private String name;
 
     private String overview;

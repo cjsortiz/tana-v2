@@ -15,4 +15,11 @@ public class CollectionAdminOptionDto {
     private String segment;
     private String collectionImage;
     private String badgeImage;
+    private String overview;
+    private String badge;
+    private String badgeOverview;
+    private String helperText;
+    private Integer moodType;
+    private Integer moodPriority;
+    private java.util.List<CollectionSpotRequestDto> spots;
 }

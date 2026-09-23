@@ -114,6 +114,7 @@ public class PlacesServiceImpl implements PlacesService {
     @Caching(evict = {
         @CacheEvict(value = "place-list", allEntries = true),
         @CacheEvict(value = "collections", allEntries = true),
+        @CacheEvict(value = "collectionDetails", allEntries = true),
         @CacheEvict(value = "collections-list-response", allEntries = true),
         @CacheEvict(value = "home-v2-response", allEntries = true)
     })
@@ -123,9 +124,22 @@ public class PlacesServiceImpl implements PlacesService {
         createPlaces(requestDto, null);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "place-list", allEntries = true),
+        @CacheEvict(value = "collections", allEntries = true),
+        @CacheEvict(value = "collectionDetails", allEntries = true),
+        @CacheEvict(value = "collections-list-response", allEntries = true),
+        @CacheEvict(value = "home-v2-response", allEntries = true)
+    })
+    @Transactional(rollbackOn = Exception.class)
     @Override
     public void createPlaces(PlacesRequestDto requestDto, MultipartFile file) throws TanaException {
-        PlaceMaster placeMaster = new PlaceMaster();
+        validatePlaceTextLength("Google address", requestDto.getGoogleAddress());
+        validatePlaceTextLength("Overview", requestDto.getOverview());
+        validatePlaceTextLength("Tana tip", requestDto.getTanaTip());
+        PlaceMaster placeMaster = requestDto.getPlaceId() == null ? new PlaceMaster()
+            : repository.findById(requestDto.getPlaceId())
+                .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
         placeMaster.setName(requestDto.getName());
         placeMaster.setTown(requestDto.getTown());
         placeMaster.setOverview(requestDto.getOverview());
@@ -137,7 +151,7 @@ public class PlacesServiceImpl implements PlacesService {
                 MainCategoryTypeEnum.fromString(requestDto.getCategoryTypeEnum()));
         }
 
-        if (!ObjectUtils.isEmpty(requestDto.getSubCategoryTypeEnum())) {
+        if (requestDto.getSubCategoryTypeEnum() != null) {
             List<SubCategoryTypeEnum> subCategoryTypeEnums =
                 Optional.ofNullable(requestDto.getSubCategoryTypeEnum())
                     .orElse(List.of())
@@ -155,6 +169,9 @@ public class PlacesServiceImpl implements PlacesService {
         placeMaster.setOpeningHours(requestDto.getOpeningHours());
         placeMaster.setFacebook(requestDto.getFacebook());
         placeMaster.setInstagram(requestDto.getInstagram());
+        if (requestDto.getImageStrings() != null) {
+            placeMaster.setImageStrings(requestDto.getImageStrings());
+        }
         PlaceMaster place = repository.save(placeMaster);
 
         if (file != null && !file.isEmpty()) {
@@ -165,16 +182,27 @@ public class PlacesServiceImpl implements PlacesService {
                 file,
                 "tana-place-images"
             );
-            place.setImageStrings(List.of(uploadedImage));
+            List<String> images = new ArrayList<>(Optional.ofNullable(place.getImageStrings()).orElse(List.of()));
+            if (images.isEmpty()) images.add(uploadedImage);
+            else images.set(0, uploadedImage);
+            place.setImageStrings(images);
             place = repository.save(place);
         }
 
-        if (!ObjectUtils.isEmpty(requestDto.getCollections())) {
+        if (requestDto.getCollections() != null) {
+            List<CollectionsCategorySelections> existing = requestDto.getPlaceId() == null ? List.of()
+                : collectionsCategorySelectionRepository.findAllByPlaceId(place.getId());
+            collectionsCategorySelectionRepository.deleteAll(existing.stream()
+                .filter(selection -> !requestDto.getCollections().contains(selection.getCollection().getCollectionName()))
+                .toList());
+            Set<String> retainedNames = existing.stream()
+                .map(selection -> selection.getCollection().getCollectionName()).collect(Collectors.toSet());
             List<CollectionsMaster> collectionsMasters = collectionService.getAllCollections();
             Map<String, CollectionsMaster> collectionsMastersMap = collectionsMasters.stream()
                 .collect(Collectors.toMap(CollectionsMaster::getCollectionName, c -> c));
             List<CollectionsCategorySelections> collectionsCategorySelections = new ArrayList<>();
-            for (String collectionName : requestDto.getCollections()) {
+            for (String collectionName : new LinkedHashSet<>(requestDto.getCollections())) {
+                if (retainedNames.contains(collectionName)) continue;
                 CollectionsMaster collection = collectionsMastersMap.get(collectionName);
                 if (collection == null) {
                     throw new TanaException(CustomCodeErrors.RECORD_NOT_EXIST);
@@ -187,6 +215,35 @@ public class PlacesServiceImpl implements PlacesService {
             }
             collectionsCategorySelectionRepository.saveAll(collectionsCategorySelections);
         }
+    }
+
+    private void validatePlaceTextLength(String field, String value) {
+        if (value != null && value.length() > 1000) {
+            TanaException exception = new TanaException(CustomCodeErrors.GENERIC_ERROR);
+            exception.setMessageCode("textTooLong");
+            exception.setErrorMessage(field + " must be 1,000 characters or fewer.");
+            throw exception;
+        }
+    }
+
+    @Override
+    @Transactional
+    public PlacesRequestDto getAdminPlace(Long placeId) throws TanaException {
+        PlaceMaster place = repository.findById(placeId)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        return PlacesRequestDto.builder()
+            .placeId(place.getId()).name(place.getName()).overview(place.getOverview())
+            .categoryTypeEnum(place.getMainCategoryTypeEnum() == null ? "" : place.getMainCategoryTypeEnum().toString())
+            .subCategoryTypeEnum(Optional.ofNullable(place.getSubCategoryTypeEnum()).orElse(List.of())
+                .stream().map(SubCategoryTypeEnum::toString).toList())
+            .town(place.getTown()).googleAddress(place.getGoogleAddress())
+            .facebook(place.getFacebook()).instagram(place.getInstagram())
+            .isTanaVerified(place.getIsTanaVerified()).imageStrings(place.getImageStrings())
+            .gpsLocation(place.getGpsLocation()).openingHours(place.getOpeningHours())
+            .openingDays(place.getOpeningDays()).tanaTip(place.getTanaTip())
+            .collections(collectionsCategorySelectionRepository.findAllByPlaceId(placeId).stream()
+                .map(selection -> selection.getCollection().getCollectionName()).distinct().toList())
+            .build();
     }
 
     @Override
