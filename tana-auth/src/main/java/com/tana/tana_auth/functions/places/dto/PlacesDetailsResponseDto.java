@@ -30,6 +30,14 @@ public class PlacesDetailsResponseDto {
     private String badgeDesc;
     private Integer index;
     private String tanaTip;
+
+    private String habalHabalTricycle;
+
+    private String commute;
+
+    private String walkFromDropOff;
+
+    private String privateCarVan;
     private String openingHours;
     private String openingDays;
     private List<String> spotImages;

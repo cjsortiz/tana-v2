@@ -46,6 +46,14 @@ public class PlacesRequestDto {
 
     private String tanaTip;
 
+    private String habalHabalTricycle;
+
+    private String commute;
+
+    private String walkFromDropOff;
+
+    private String privateCarVan;
+
     private List<String> collections;
 
 

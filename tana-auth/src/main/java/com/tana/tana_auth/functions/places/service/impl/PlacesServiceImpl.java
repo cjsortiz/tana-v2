@@ -137,6 +137,10 @@ public class PlacesServiceImpl implements PlacesService {
         validatePlaceTextLength("Google address", requestDto.getGoogleAddress());
         validatePlaceTextLength("Overview", requestDto.getOverview());
         validatePlaceTextLength("Tana tip", requestDto.getTanaTip());
+        validatePlaceTextLength("habalHabalTricycle", requestDto.getHabalHabalTricycle());
+        validatePlaceTextLength("commute", requestDto.getCommute());
+        validatePlaceTextLength("walkFromDropOff", requestDto.getWalkFromDropOff());
+        validatePlaceTextLength("privateCarVan", requestDto.getPrivateCarVan());
         PlaceMaster placeMaster = requestDto.getPlaceId() == null ? new PlaceMaster()
             : repository.findById(requestDto.getPlaceId())
                 .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
@@ -144,6 +148,10 @@ public class PlacesServiceImpl implements PlacesService {
         placeMaster.setTown(requestDto.getTown());
         placeMaster.setOverview(requestDto.getOverview());
         placeMaster.setTanaTip(requestDto.getTanaTip());
+        if (requestDto.getHabalHabalTricycle() != null) placeMaster.setHabalHabalTricycle(requestDto.getHabalHabalTricycle().trim());
+        if (requestDto.getCommute() != null) placeMaster.setCommute(requestDto.getCommute().trim());
+        if (requestDto.getWalkFromDropOff() != null) placeMaster.setWalkFromDropOff(requestDto.getWalkFromDropOff().trim());
+        if (requestDto.getPrivateCarVan() != null) placeMaster.setPrivateCarVan(requestDto.getPrivateCarVan().trim());
 
 
         if (!ObjectUtils.isEmpty(requestDto.getCategoryTypeEnum())) {
@@ -241,6 +249,10 @@ public class PlacesServiceImpl implements PlacesService {
             .isTanaVerified(place.getIsTanaVerified()).imageStrings(place.getImageStrings())
             .gpsLocation(place.getGpsLocation()).openingHours(place.getOpeningHours())
             .openingDays(place.getOpeningDays()).tanaTip(place.getTanaTip())
+            .habalHabalTricycle(place.getHabalHabalTricycle())
+            .commute(place.getCommute())
+            .walkFromDropOff(place.getWalkFromDropOff())
+            .privateCarVan(place.getPrivateCarVan())
             .collections(collectionsCategorySelectionRepository.findAllByPlaceId(placeId).stream()
                 .map(selection -> selection.getCollection().getCollectionName()).distinct().toList())
             .build();
@@ -746,6 +758,10 @@ public class PlacesServiceImpl implements PlacesService {
                 : placeMaster.getMainCategoryTypeEnum().getTypeString())
             .badgeDesc(cm == null ? null : cm.getBadgeOverview())
             .tanaTip(placeMaster.getTanaTip())
+            .habalHabalTricycle(placeMaster.getHabalHabalTricycle())
+            .commute(placeMaster.getCommute())
+            .walkFromDropOff(placeMaster.getWalkFromDropOff())
+            .privateCarVan(placeMaster.getPrivateCarVan())
             .openingHours(placeMaster.getOpeningHours())
             .openingDays(placeMaster.getOpeningDays())
             .visitCount(Optional.ofNullable(placeMaster.getVisitors()).orElse(List.of()).stream()

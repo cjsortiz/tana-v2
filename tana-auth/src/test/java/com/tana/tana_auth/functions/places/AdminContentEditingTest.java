@@ -21,11 +21,36 @@ import static org.mockito.Mockito.*;
 
 class AdminContentEditingTest {
     @Test
+    void transportOptionsRoundTripPreserveOmissionsAndAllowClearing() throws Exception {
+        PlacesRepository places = mock(PlacesRepository.class);
+        CollectionsCategorySelectionRepository selections = mock(CollectionsCategorySelectionRepository.class);
+        PlacesServiceImpl service = new PlacesServiceImpl();
+        ReflectionTestUtils.setField(service, "repository", places);
+        ReflectionTestUtils.setField(service, "collectionsCategorySelectionRepository", selections);
+        PlaceMaster place = new PlaceMaster();
+        place.setId(7L);
+        when(places.findById(7L)).thenReturn(Optional.of(place));
+        when(places.save(any())).thenAnswer(call -> call.getArgument(0));
+        when(selections.findAllByPlaceId(7L)).thenReturn(List.of());
+        for (String field : List.of("habalHabalTricycle", "commute", "walkFromDropOff", "privateCarVan")) {
+            PlacesRequestDto request = PlacesRequestDto.builder().placeId(7L).name("Island").build();
+            ReflectionTestUtils.setField(request, field, " Directions ");
+            service.createPlaces(request);
+            assertEquals("Directions", ReflectionTestUtils.getField(service.getAdminPlace(7L), field));
+            service.createPlaces(PlacesRequestDto.builder().placeId(7L).name("Island").build());
+            assertEquals("Directions", ReflectionTestUtils.getField(place, field));
+            ReflectionTestUtils.setField(request, field, " ");
+            service.createPlaces(request);
+            assertEquals("", ReflectionTestUtils.getField(place, field));
+        }
+    }
+
+    @Test
     void spotTextLimitsApplyBeforePersistenceForCreateEditAndPhotoRequests() {
         PlacesRepository places = mock(PlacesRepository.class);
         PlacesServiceImpl service = new PlacesServiceImpl();
         ReflectionTestUtils.setField(service, "repository", places);
-        for (String field : List.of("googleAddress", "overview", "tanaTip")) {
+        for (String field : List.of("googleAddress", "overview", "tanaTip", "habalHabalTricycle", "commute", "walkFromDropOff", "privateCarVan")) {
             for (Long id : Arrays.asList(null, 7L)) {
                 for (boolean photo : new boolean[]{false, true}) {
                     PlacesRequestDto request = PlacesRequestDto.builder().placeId(id).name("Spot").build();

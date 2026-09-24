@@ -85,6 +85,18 @@ public class PlaceMaster extends Auditable {
     @Column(name = "tanaTip", columnDefinition = "TEXT")
     private String tanaTip;
 
+    @Column(name = "habalHabalTricycle", columnDefinition = "TEXT")
+    private String habalHabalTricycle;
+
+    @Column(name = "commute", columnDefinition = "TEXT")
+    private String commute;
+
+    @Column(name = "walkFromDropOff", columnDefinition = "TEXT")
+    private String walkFromDropOff;
+
+    @Column(name = "privateCarVan", columnDefinition = "TEXT")
+    private String privateCarVan;
+
     @Column(name = "imageStrings", columnDefinition = "JSON")
     @Convert(converter = JsonListConverter.class)
     private List<String> imageStrings;
