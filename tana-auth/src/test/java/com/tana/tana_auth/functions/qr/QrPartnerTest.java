@@ -18,8 +18,50 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class QrPartnerTest {
+    @Test
+    void eventQrUsesCurrentSlugAndCountsStableEventId() {
+        com.tana.tana_common.model.EventsMaster event = new com.tana.tana_common.model.EventsMaster();
+        event.setEventSlug("bohol-fiesta");
+        when(events.existsById(12L)).thenReturn(true);
+        when(events.findById(12L)).thenReturn(java.util.Optional.of(event));
+        String html = service.recordScanAndBuildHandoff("event", 12L, null, new MockHttpServletRequest());
+        assertTrue(html.contains("type=event&id=bohol-fiesta"));
+        ArgumentCaptor<QrScanEvent> saved = ArgumentCaptor.forClass(QrScanEvent.class);
+        verify(scans).save(saved.capture());
+        assertEquals(12L, saved.getValue().getTargetId());
+        assertEquals("EVENT", saved.getValue().getQrType().name());
+        assertThrows(ResponseStatusException.class, () -> service.recordScanAndBuildHandoff("event", 99L, null, new MockHttpServletRequest()));
+    }
+
+    @Test
+    void categoryLinksRetainCategoryAndPartnerThroughHandoff() {
+        for (long categoryId = 1; categoryId <= 4; categoryId++) {
+            MockHttpServletRequest request = new MockHttpServletRequest();
+            request.setParameter("partnerId", "7");
+            String html = service.recordScanAndBuildHandoff("category", categoryId, null, request);
+            assertTrue(html.contains("type=category&id=" + categoryId));
+        }
+        ArgumentCaptor<QrScanEvent> events = ArgumentCaptor.forClass(QrScanEvent.class);
+        verify(scans, times(4)).save(events.capture());
+        for (int index = 0; index < 4; index++) {
+            assertEquals("CATEGORY", events.getAllValues().get(index).getQrType().name());
+            assertEquals(index + 1L, events.getAllValues().get(index).getTargetId());
+            assertEquals(7L, events.getAllValues().get(index).getPartnerId());
+        }
+    }
+
+    @Test
+    void unknownCategoriesAreRejectedBeforeCountingScans() {
+        for (Long id : new Long[]{null, 0L, 5L, -1L}) {
+            assertThrows(ResponseStatusException.class, () -> service.recordScanAndBuildHandoff(
+                "category", id, null, new MockHttpServletRequest()));
+        }
+        verifyNoInteractions(scans);
+    }
+
     private QrScanEventRepository scans;
     private QrServiceImpl service;
+    private com.tana.tana_auth.functions.events.repository.EventsRepository events;
 
     @BeforeEach
     void setup() {
@@ -32,7 +74,8 @@ class QrPartnerTest {
         when(places.existsById(12L)).thenReturn(true);
         when(routes.existsById(12L)).thenReturn(true);
         when(partners.existsById(7L)).thenReturn(true);
-        service = new QrServiceImpl(scans, collections, places, routes, mock(AuthConfig.class), partners);
+        events = mock(com.tana.tana_auth.functions.events.repository.EventsRepository.class);
+        service = new QrServiceImpl(scans, collections, places, routes, mock(AuthConfig.class), partners, events);
         ReflectionTestUtils.setField(service, "iosAppStoreUrl", "https://apps.apple.com/test");
         ReflectionTestUtils.setField(service, "androidPlayStoreUrl", "https://play.google.com/test");
         ReflectionTestUtils.setField(service, "analyticsHashSalt", "test");

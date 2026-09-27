@@ -1,6 +1,7 @@
 package com.tana.tana_auth.functions.qr.service.impl;
 
 import com.tana.tana_auth.config.AuthConfig;
+import com.tana.tana_auth.functions.events.repository.EventsRepository;
 import com.tana.tana_auth.functions.collections.repository.CollectionRepository;
 import com.tana.tana_auth.functions.places.repository.PlacesRepository;
 import com.tana.tana_auth.functions.qr.dto.QrAnalyticsDto;
@@ -35,6 +36,7 @@ public class QrServiceImpl implements QrService {
     private final PlacesRepository placesRepository;
     private final RouteRepository routeRepository;
     private final AuthConfig authConfig;
+    private final EventsRepository eventsRepository;
     private final RoutePartnerRepository routePartnerRepository;
 
     @Value("${qr.ios-app-store-url:https://apps.apple.com/ph/app/tana/id6769938553}")
@@ -55,13 +57,15 @@ public class QrServiceImpl implements QrService {
         PlacesRepository placesRepository,
         RouteRepository routeRepository,
         AuthConfig authConfig,
-        RoutePartnerRepository routePartnerRepository
+        RoutePartnerRepository routePartnerRepository,
+        EventsRepository eventsRepository
     ) {
         this.qrScanEventRepository = qrScanEventRepository;
         this.collectionRepository = collectionRepository;
         this.placesRepository = placesRepository;
         this.routeRepository = routeRepository;
         this.authConfig = authConfig;
+        this.eventsRepository = eventsRepository;
         this.routePartnerRepository = routePartnerRepository;
     }
 
@@ -133,6 +137,10 @@ public class QrServiceImpl implements QrService {
                 .toList())
             .totalScans(qrScanEventRepository.count())
             .uniqueScanners(qrScanEventRepository.countUniqueScanners())
+            .eventScans(qrScanEventRepository.countByQrType(QrType.EVENT))
+            .eventUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.EVENT))
+            .categoryScans(qrScanEventRepository.countByQrType(QrType.CATEGORY))
+            .categoryUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.CATEGORY))
             .collectionScans(qrScanEventRepository.countByQrType(QrType.COLLECTION))
             .collectionUniqueScanners(qrScanEventRepository.countUniqueScannersByType(QrType.COLLECTION))
             .spotScans(qrScanEventRepository.countByQrType(QrType.SPOT))
@@ -173,6 +181,9 @@ public class QrServiceImpl implements QrService {
 
     private void validateTarget(QrType type, Long targetId) {
         boolean valid = switch (type) {
+            // Stable IDs shared with QR_MAP_CATEGORIES in the app.
+            case EVENT -> targetId != null && eventsRepository.existsById(targetId);
+            case CATEGORY -> targetId != null && java.util.Set.of(1L, 2L, 3L, 4L).contains(targetId);
             case DOWNLOAD -> targetId == null;
             case COLLECTION -> targetId != null && collectionRepository.existsById(targetId);
             case SPOT -> targetId != null && placesRepository.existsById(targetId);
@@ -206,7 +217,10 @@ public class QrServiceImpl implements QrService {
 
     private String handoffPage(QrType type, Long targetId, String scanToken, String requestedAppUrl) {
         String typeValue = type.name().toLowerCase(Locale.ROOT);
-        String targetQuery = targetId == null ? "" : "&id=" + targetId;
+        String destinationId = type == QrType.EVENT
+            ? eventsRepository.findById(targetId).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Event not found")).getEventSlug()
+            : String.valueOf(targetId);
+        String targetQuery = targetId == null ? "" : "&id=" + encodeUrl(destinationId);
         String scanQuery = "&scan=" + scanToken;
         boolean expoGoTarget = isExpoGoUrl(requestedAppUrl);
         String deepLink = expoGoTarget

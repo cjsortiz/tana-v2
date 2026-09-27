@@ -242,8 +242,11 @@ public class PlacesServiceImpl implements PlacesService {
         return PlacesRequestDto.builder()
             .placeId(place.getId()).name(place.getName()).overview(place.getOverview())
             .categoryTypeEnum(place.getMainCategoryTypeEnum() == null ? "" : place.getMainCategoryTypeEnum().toString())
-            .subCategoryTypeEnum(Optional.ofNullable(place.getSubCategoryTypeEnum()).orElse(List.of())
-                .stream().map(SubCategoryTypeEnum::toString).toList())
+            // JsonListConverter hydrates persisted enum names as strings.
+            // Accept both hydrated strings and enums from newly edited entities.
+            .subCategoryTypeEnum(Optional.ofNullable((List<?>) place.getSubCategoryTypeEnum()).orElse(List.of())
+                .stream().filter(Objects::nonNull)
+                .map(value -> SubCategoryTypeEnum.fromString(value.toString()).getSubTypeString()).toList())
             .town(place.getTown()).googleAddress(place.getGoogleAddress())
             .facebook(place.getFacebook()).instagram(place.getInstagram())
             .isTanaVerified(place.getIsTanaVerified()).imageStrings(place.getImageStrings())

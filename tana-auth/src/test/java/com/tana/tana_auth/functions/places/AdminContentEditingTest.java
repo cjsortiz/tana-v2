@@ -21,6 +21,30 @@ import static org.mockito.Mockito.*;
 
 class AdminContentEditingTest {
     @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void adminSpotLoadsJsonSubcategoriesAsEditableLabels() throws Exception {
+        PlacesRepository places = mock(PlacesRepository.class);
+        CollectionsCategorySelectionRepository selections = mock(CollectionsCategorySelectionRepository.class);
+        PlacesServiceImpl service = new PlacesServiceImpl();
+        ReflectionTestUtils.setField(service, "repository", places);
+        ReflectionTestUtils.setField(service, "collectionsCategorySelectionRepository", selections);
+        PlaceMaster place = new PlaceMaster();
+        place.setId(7L);
+        place.setName("Existing island spot");
+        // Match the real persistence converter: JSON enum names become strings.
+        List stored = new com.tana.tana_common.util.converter.JsonListConverter()
+            .convertToEntityAttribute("[\"COASTAL\",\"LOCAL_LIFE\"]");
+        place.setSubCategoryTypeEnum(stored);
+        when(places.findById(7L)).thenReturn(Optional.of(place));
+        when(selections.findAllByPlaceId(7L)).thenReturn(List.of());
+        PlacesRequestDto result = service.getAdminPlace(7L);
+        assertEquals(7L, result.getPlaceId());
+        assertEquals(List.of("Coastal", "Local Life"), result.getSubCategoryTypeEnum());
+        place.setSubCategoryTypeEnum(List.of(com.tana.tana_common.constant.enums.SubCategoryTypeEnum.COASTAL));
+        assertEquals(List.of("Coastal"), service.getAdminPlace(7L).getSubCategoryTypeEnum());
+    }
+
+    @Test
     void transportOptionsRoundTripPreserveOmissionsAndAllowClearing() throws Exception {
         PlacesRepository places = mock(PlacesRepository.class);
         CollectionsCategorySelectionRepository selections = mock(CollectionsCategorySelectionRepository.class);

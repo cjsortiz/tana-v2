@@ -10,6 +10,10 @@ import java.util.List;
 public class QrAnalyticsDto {
     private long totalScans;
     private long uniqueScanners;
+    private long eventScans;
+    private long eventUniqueScanners;
+    private long categoryScans;
+    private long categoryUniqueScanners;
     private long collectionScans;
     private long collectionUniqueScanners;
     private long spotScans;
