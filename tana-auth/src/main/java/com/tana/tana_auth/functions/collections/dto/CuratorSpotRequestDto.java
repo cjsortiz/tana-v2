@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CuratorSpotRequestDto {
+    private Long curatorSpotId;
     private Long placeId;
     private Integer displayOrder;
     private String proofLabel;

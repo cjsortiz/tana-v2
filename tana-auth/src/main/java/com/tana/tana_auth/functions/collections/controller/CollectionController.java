@@ -67,6 +67,20 @@ public class CollectionController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/admin/curator-spots/{id}")
+    public TanaApiResponse deleteCuratorSpot(@PathVariable("id") Long id) throws TanaException {
+        collectionService.deleteCuratorSpot(id);
+        return TanaApiResponse.builder().isSuccess(true).build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/admin/tana-stories/{id}")
+    public TanaApiResponse deleteTanaStory(@PathVariable("id") Long id) throws TanaException {
+        collectionService.deleteTanaStory(id);
+        return TanaApiResponse.builder().isSuccess(true).build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(value = "/admin/curator-spots")
     public TanaApiResponse getAdminCuratorSpots() {
         return TanaApiResponse.builder()

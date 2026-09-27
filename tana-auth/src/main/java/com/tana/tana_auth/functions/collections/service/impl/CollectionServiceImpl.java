@@ -202,8 +202,15 @@ public class CollectionServiceImpl implements CollectionService {
             Optional.ofNullable(requestDto.getPlaceId()).orElse(0L)
         ).orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
 
-        CuratorSpot curatorSpot = curatorSpotRepository.findByPlaceId(place.getId())
-            .orElseGet(CuratorSpot::new);
+        CuratorSpot curatorSpot = requestDto.getCuratorSpotId() == null
+            ? curatorSpotRepository.findByPlaceId(place.getId()).orElseGet(CuratorSpot::new)
+            : curatorSpotRepository.findById(requestDto.getCuratorSpotId())
+                .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        // Changing the featured place must not overwrite a different pick.
+        Optional<CuratorSpot> duplicate = curatorSpotRepository.findByPlaceId(place.getId());
+        if (duplicate.isPresent() && !Objects.equals(duplicate.get().getCuratorSpotId(), curatorSpot.getCuratorSpotId())) {
+            throw new TanaException(CustomCodeErrors.GENERIC_ERROR);
+        }
         curatorSpot.setPlace(place);
         curatorSpot.setDisplayOrder(Optional.ofNullable(requestDto.getDisplayOrder()).orElse(1));
         curatorSpot.setProofLabel(trimToNull(requestDto.getProofLabel()));
@@ -238,9 +245,9 @@ public class CollectionServiceImpl implements CollectionService {
         TanaStoryRequestDto requestDto,
         MultipartFile file
     ) throws TanaException {
-        TanaStory story = Optional.ofNullable(requestDto.getTanaStoryId())
-            .flatMap(tanaStoryRepository::findById)
-            .orElseGet(TanaStory::new);
+        TanaStory story = requestDto.getTanaStoryId() == null ? new TanaStory()
+            : tanaStoryRepository.findById(requestDto.getTanaStoryId())
+                .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
 
         story.setTitle(requireText(requestDto.getTitle()));
         story.setLinkUrl(requireText(requestDto.getLinkUrl()));
@@ -271,6 +278,30 @@ public class CollectionServiceImpl implements CollectionService {
         }
 
         return toTanaStoryDto(savedStory);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "collections-list-response", allEntries = true),
+        @CacheEvict(value = "home-v2-response", allEntries = true)
+    })
+    public void deleteCuratorSpot(Long id) throws TanaException {
+        CuratorSpot pick = curatorSpotRepository.findById(id)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        curatorSpotRepository.delete(pick);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "collections-list-response", allEntries = true),
+        @CacheEvict(value = "home-v2-response", allEntries = true)
+    })
+    public void deleteTanaStory(Long id) throws TanaException {
+        TanaStory story = tanaStoryRepository.findById(id)
+            .orElseThrow(() -> new TanaException(CustomCodeErrors.RECORD_NOT_EXIST));
+        tanaStoryRepository.delete(story);
     }
 
     private CollectionAdminOptionDto toAdminOption(CollectionsMaster collection) {

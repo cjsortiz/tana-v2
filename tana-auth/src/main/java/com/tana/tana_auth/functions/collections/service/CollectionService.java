@@ -28,6 +28,8 @@ public interface CollectionService {
         MultipartFile collectionImage,
         MultipartFile badgeImage
     ) throws TanaException;
+    void deleteCuratorSpot(Long id) throws TanaException;
+    void deleteTanaStory(Long id) throws TanaException;
     List<CuratorSpotResponseDto> getAdminCuratorSpots();
     CuratorSpotResponseDto saveCuratorSpot(CuratorSpotRequestDto requestDto) throws TanaException;
     List<TanaStoryResponseDto> getAdminTanaStories();
